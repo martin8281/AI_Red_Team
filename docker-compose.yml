@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database with pgvector Extension
+  postgres_vector:
+    image: pgvector/pgvector:pg16
+    container_name: redteam_postgres_vector
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-redteam_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-redteam_secure_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-redteam_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U redteam_user -d redteam_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. FastAPI Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: redteam_fastapi_backend
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://redteam_user:redteam_secure_pass@postgres_vector:5432/redteam_db
+      SECRET_KEY: ${SECRET_KEY:-super-secret-production-key-change-me-redteam-2026}
+      JWT_SECRET: ${JWT_SECRET:-jwt-signing-secret-change-in-production-2026}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:14b}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+      ENVIRONMENT: production
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres_vector:
+        condition: service_healthy
+
+  # 3. Frontend Web Application (Nginx + React/Vite)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: redteam_react_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
