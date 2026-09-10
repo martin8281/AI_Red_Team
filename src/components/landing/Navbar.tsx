@@ -63,8 +63,8 @@ export const Navbar: React.FC = () => {
           >
             <ShieldLogo size={32} />
             <div className="flex flex-col">
-              <span className="text-base sm:text-lg font-bold tracking-wider text-text-primary group-hover:text-white flex items-center gap-1.5">
-                <span className="text-brand-primary font-extrabold">AI</span> RED TEAM ASSISTANT
+              <span className="text-base sm:text-lg font-bold tracking-wider group-hover:text-white flex items-center gap-1.5">
+                <span className="text-brand-primary font-extrabold">AI</span> <span className="text-[#e00000]">RED</span> <span className="text-white">TEAM ASSISTANT</span>
               </span>
               <span className="text-[10px] text-text-muted font-mono tracking-widest uppercase">
                 Authorized Security Testing

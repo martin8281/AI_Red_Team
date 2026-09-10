@@ -3,7 +3,8 @@ import {
   ChatMessage, 
   AssistantChatRequest, 
   AssistantChatResponse, 
-  ContextType 
+  ContextType,
+  ConversationMode
 } from '../types/ai.types';
 import { ContextBuilder } from '../ai/contextBuilder';
 import { PromptManager } from '../ai/promptManager';
@@ -11,6 +12,7 @@ import { MockAiProvider } from '../ai/mockAiProvider';
 import { projectService } from './projectService';
 import { knowledgeService } from './knowledgeService';
 import { SourceCitation } from '../types/knowledge.types';
+import { SessionContextStore } from '../ai/sessionStore';
 
 const STORAGE_KEY_CONVERSATIONS = 'art_ai_conversations';
 const STORAGE_KEY_MESSAGES = 'art_ai_messages';
@@ -91,6 +93,12 @@ class AIService {
             'Verify that supplying single quotes and SQL operators returns standard 400 Bad Request without query evaluation differences.',
           confidence: 'HIGH',
         },
+        actions: [
+          { id: 'create-finding', label: 'Create Finding', type: 'create_finding', variant: 'primary' },
+          { id: 'analyze-risk', label: 'Analyze Risk', type: 'analyze_risk', variant: 'secondary' },
+          { id: 'suggest-tests', label: 'Suggest Tests', type: 'suggest_tests', variant: 'secondary' },
+          { id: 'explain-more', label: 'Explain More', type: 'explain_more', variant: 'secondary' },
+        ],
         timestamp: '2026-08-27T09:45:30.000Z',
       },
     ];
@@ -122,11 +130,74 @@ class AIService {
     return all.filter((m) => m.conversationId === conversationId);
   }
 
+  async setConversationMode(conversationId: string, mode: ConversationMode): Promise<Conversation | null> {
+    const list = this.loadConversations();
+    const conv = list.find((c) => c.id === conversationId);
+    if (!conv) return null;
+    conv.mode = mode;
+    conv.updatedAt = new Date().toISOString();
+    this.saveConversations(list);
+    return conv;
+  }
+
+  detectModeSwitch(message: string): { newMode?: ConversationMode; isExplicit: boolean } {
+    const clean = message.trim();
+    const lower = clean.toLowerCase();
+
+    // Explicit tag markers
+    if (/\[mode:\s*assistant\]/i.test(clean)) return { newMode: 'assistant', isExplicit: true };
+    if (/\[mode:\s*(chat|normal)\]/i.test(clean)) return { newMode: 'chat', isExplicit: true };
+
+    // Explicit phrases
+    if (
+      /switch to assistant mode/i.test(lower) ||
+      /enter assistant mode/i.test(lower) ||
+      /assistant mode/i.test(lower) ||
+      /analyze this properly/i.test(lower) ||
+      /run full analysis/i.test(lower) ||
+      /full investigation/i.test(lower) ||
+      /run an investigation/i.test(lower)
+    ) {
+      return { newMode: 'assistant', isExplicit: true };
+    }
+
+    if (
+      /switch to normal chat/i.test(lower) ||
+      /go back to normal chat/i.test(lower) ||
+      /switch to chat mode/i.test(lower) ||
+      /just chat with me/i.test(lower) ||
+      /normal conversation/i.test(lower) ||
+      /just talk to me/i.test(lower) ||
+      /normal chat/i.test(lower)
+    ) {
+      return { newMode: 'chat', isExplicit: true };
+    }
+
+    // Strong implicit intent
+    if (
+      /give me the formal finding/i.test(lower) ||
+      /generate the vulnerability report/i.test(lower) ||
+      /create formal finding/i.test(lower)
+    ) {
+      return { newMode: 'assistant', isExplicit: false };
+    }
+
+    if (
+      /never mind,?\s*let'?s just talk about/i.test(lower) ||
+      /enough analysis,?\s*let'?s just chat/i.test(lower)
+    ) {
+      return { newMode: 'chat', isExplicit: false };
+    }
+
+    return { isExplicit: false };
+  }
+
   async createConversation(data: {
     projectId: string;
     contextType: ContextType;
     contextId?: string;
     title?: string;
+    mode?: ConversationMode;
   }): Promise<Conversation> {
     const list = this.loadConversations();
     const now = new Date().toISOString();
@@ -138,6 +209,7 @@ class AIService {
       contextType: data.contextType,
       contextId: data.contextId,
       title: data.title || `Chat on ${data.contextType.toUpperCase()}`,
+      mode: data.mode || 'chat',
       createdAt: now,
       updatedAt: now,
     };
@@ -171,9 +243,25 @@ class AIService {
       params.contextId
     );
 
-    // 2. Ensure conversation exists
+    // 2. Ensure conversation exists & resolve mode
     let conversations = this.loadConversations();
     let currentConv = convId ? conversations.find((c) => c.id === convId) : null;
+    const previousMode: ConversationMode = currentConv?.mode || 'chat';
+
+    // Detect mode switches
+    let activeMode: ConversationMode = previousMode;
+    let didSwitchMode = false;
+
+    if (params.mode && params.mode !== previousMode) {
+      activeMode = params.mode;
+      didSwitchMode = true;
+    } else {
+      const modeDetection = this.detectModeSwitch(params.message);
+      if (modeDetection.newMode && modeDetection.newMode !== previousMode) {
+        activeMode = modeDetection.newMode;
+        didSwitchMode = true;
+      }
+    }
 
     if (!currentConv) {
       currentConv = {
@@ -183,6 +271,7 @@ class AIService {
         contextType: params.contextType,
         contextId: params.contextId,
         title: params.message.slice(0, 36) || `Analysis of ${resolvedContext.projectName}`,
+        mode: activeMode,
         createdAt: now,
         updatedAt: now,
       };
@@ -193,28 +282,40 @@ class AIService {
       currentConv.updatedAt = now;
       currentConv.contextType = params.contextType;
       currentConv.contextId = params.contextId;
+      currentConv.mode = activeMode;
       this.saveConversations(conversations);
     }
 
     const finalConversationId: string = convId || currentConv?.id || `conv-${Date.now()}`;
 
-    // 3. Record user message
+    // 3. Register turn in SessionContextStore (persists new files, extracts user constraints)
+    const sessionMemory = SessionContextStore.registerTurn(
+      finalConversationId,
+      params.projectId,
+      params.message,
+      params.attachments
+    );
+
+    // 4. Record user message
     const allMessages = this.loadMessages();
     const userMsg: ChatMessage = {
       id: `msg-${Date.now()}-user`,
       conversationId: finalConversationId,
       role: 'user',
-      content: params.message,
+      content: params.message || (params.attachments && params.attachments.length > 0 ? `Uploaded ${params.attachments.length} forensic evidence artifact(s): ${params.attachments.map(a => a.name).join(', ')}` : ''),
+      mode: activeMode,
+      attachments: params.attachments,
       metadata: {
         projectId: params.projectId,
         contextType: params.contextType,
         contextId: params.contextId,
+        mode: activeMode,
       },
       timestamp: now,
     };
     allMessages.push(userMsg);
 
-    // 4. Run RAG Router & Retrieve Verified Knowledge Chunks
+    // 5. Run RAG Router & Retrieve Verified Knowledge Chunks
     const route = knowledgeService.routeQuery(params.message);
     let citations: SourceCitation[] = [];
     let knowledgeContext = '';
@@ -234,11 +335,21 @@ class AIService {
       }
     }
 
-    const combinedContext = knowledgeContext
-      ? `${resolvedContext.structuredContext}\n\n### RETRIEVED AUTHORITATIVE KNOWLEDGE:\n${knowledgeContext}`
-      : resolvedContext.structuredContext;
+    // 6. Build Cumulative Multi-Turn Context (Session Files + Stated Facts + RAG)
+    const sessionContextBlock = SessionContextStore.buildSessionContextBlock(
+      finalConversationId,
+      params.projectId
+    );
 
-    // 5. Generate structured response via Provider
+    let combinedContext = resolvedContext.structuredContext;
+    if (sessionContextBlock) {
+      combinedContext += `\n\n${sessionContextBlock}`;
+    }
+    if (knowledgeContext) {
+      combinedContext += `\n\n### RETRIEVED AUTHORITATIVE KNOWLEDGE:\n${knowledgeContext}`;
+    }
+
+    // 7. Generate structured response with CUMULATIVE session files and active mode
     const structuredResponse = await MockAiProvider.generate({
       projectName: resolvedContext.projectName,
       contextType: params.contextType,
@@ -246,24 +357,64 @@ class AIService {
       contextText: combinedContext,
       userMessage: params.message,
       quickAction: params.quickAction,
+      mode: activeMode,
+      attachments: sessionMemory.uploadedFiles, // Multi-turn cumulative files
     });
 
-    if (citations.length > 0) {
+    // If mode switched on this turn, prepend single-line confirmation if not already included
+    if (didSwitchMode) {
+      const prefix = activeMode === 'assistant' ? 'Switching to Assistant Mode —\n\n' : 'Switching to Normal Chat —\n\n';
+      if (!structuredResponse.summary.startsWith('Switching to') && !structuredResponse.rawText?.startsWith('Switching to')) {
+        if (structuredResponse.rawText) {
+          structuredResponse.rawText = prefix + structuredResponse.rawText;
+        }
+        structuredResponse.summary = prefix + structuredResponse.summary;
+      }
+    }
+
+    if (citations.length > 0 && activeMode === 'assistant') {
       structuredResponse.sources = citations;
     }
 
-    // 6. Record assistant message
+    // Record findings & correlations into session memory
+    if (structuredResponse.findings && structuredResponse.findings.length > 0) {
+      SessionContextStore.recordFindings(
+        finalConversationId,
+        params.projectId,
+        structuredResponse.findings
+      );
+    }
+    if (structuredResponse.correlated_events && structuredResponse.correlated_events.length > 0) {
+      SessionContextStore.recordCorrelations(
+        finalConversationId,
+        params.projectId,
+        structuredResponse.correlated_events
+      );
+    }
+
+    // 8. Determine whether to attach structured card or plain conversational text
+    // In Normal Chat mode: ALWAYS plain conversational text unless user specifically requested a quickAction or structured report
+    const isPlainConversation =
+      activeMode === 'chat'
+        ? !params.quickAction
+        : structuredResponse.intent === 'casual' ||
+          structuredResponse.intent === 'clarifying' ||
+          (!structuredResponse.risk && !structuredResponse.findings && !structuredResponse.recommendation && !structuredResponse.reasoning);
+
     const assistantMsg: ChatMessage = {
       id: `msg-${Date.now()}-ai`,
       conversationId: finalConversationId,
       role: 'assistant',
-      content: structuredResponse.summary,
-      structured: structuredResponse,
-      sources: citations.length > 0 ? citations : undefined,
+      content: structuredResponse.rawText || structuredResponse.summary,
+      mode: activeMode,
+      structured: isPlainConversation ? undefined : structuredResponse,
+      actions: activeMode === 'chat' && !params.quickAction ? undefined : structuredResponse.actions,
+      sources: citations.length > 0 && activeMode === 'assistant' ? citations : undefined,
       metadata: {
         projectId: params.projectId,
         contextType: params.contextType,
         contextId: params.contextId,
+        mode: activeMode,
       },
       timestamp: new Date().toISOString(),
     };
@@ -273,7 +424,186 @@ class AIService {
     return {
       conversationId: finalConversationId,
       message: assistantMsg,
+      mode: activeMode,
     };
+  }
+
+  async editAndRegenerateMessage(params: {
+    conversationId: string;
+    messageId: string;
+    newMessage: string;
+    projectId: string;
+    contextType: ContextType;
+    contextId?: string;
+  }): Promise<AssistantChatResponse> {
+    const allMessages = this.loadMessages();
+    const msgIndex = allMessages.findIndex(
+      (m) => m.id === params.messageId && m.conversationId === params.conversationId
+    );
+
+    if (msgIndex === -1) {
+      return this.sendMessage({
+        conversationId: params.conversationId,
+        projectId: params.projectId,
+        contextType: params.contextType,
+        contextId: params.contextId,
+        message: params.newMessage,
+      });
+    }
+
+    // Update user message content
+    allMessages[msgIndex].content = params.newMessage;
+    allMessages[msgIndex].timestamp = new Date().toISOString();
+
+    // Truncate all subsequent messages in this conversation
+    const targetConvId = params.conversationId;
+    const remainingMessages: ChatMessage[] = [];
+    let keep = true;
+    for (const m of allMessages) {
+      if (m.conversationId === targetConvId) {
+        if (m.id === params.messageId) {
+          remainingMessages.push(m);
+          keep = false;
+        } else if (keep) {
+          remainingMessages.push(m);
+        }
+      } else {
+        remainingMessages.push(m);
+      }
+    }
+
+    this.saveMessages(remainingMessages);
+
+    // Build context
+    const resolvedContext = await ContextBuilder.buildContext(
+      params.projectId,
+      params.contextType,
+      params.contextId
+    );
+
+    const sessionMemory = SessionContextStore.registerTurn(
+      params.conversationId,
+      params.projectId,
+      params.newMessage
+    );
+
+    const route = knowledgeService.routeQuery(params.newMessage);
+    let citations: SourceCitation[] = [];
+    let knowledgeContext = '';
+
+    if (route.intent === 'KNOWLEDGE_BASE' || route.intent === 'HYBRID') {
+      const chunks = await knowledgeService.searchChunks(params.newMessage, { limit: route.suggestedK || 2 });
+      if (chunks.length > 0) {
+        citations = chunks.map((c) => ({
+          documentId: c.documentId,
+          title: c.title,
+          source: c.sourceName,
+          reference: c.section,
+          relevanceScore: c.similarityScore,
+          snippet: c.content.slice(0, 140) + '...',
+        }));
+        knowledgeContext = chunks.map((c) => `[SOURCE: ${c.sourceName} - ${c.title} (${c.section})]\n${c.content}`).join('\n\n');
+      }
+    }
+
+    const sessionContextBlock = SessionContextStore.buildSessionContextBlock(
+      params.conversationId,
+      params.projectId
+    );
+
+    let combinedContext = resolvedContext.structuredContext;
+    if (sessionContextBlock) {
+      combinedContext += `\n\n${sessionContextBlock}`;
+    }
+    if (knowledgeContext) {
+      combinedContext += `\n\n### RETRIEVED AUTHORITATIVE KNOWLEDGE:\n${knowledgeContext}`;
+    }
+
+    let conversations = this.loadConversations();
+    let currentConv = conversations.find((c) => c.id === params.conversationId);
+    const activeMode: ConversationMode = currentConv?.mode || 'chat';
+
+    const structuredResponse = await MockAiProvider.generate({
+      projectName: resolvedContext.projectName,
+      contextType: params.contextType,
+      contextId: params.contextId,
+      contextText: combinedContext,
+      userMessage: params.newMessage,
+      mode: activeMode,
+      attachments: sessionMemory.uploadedFiles,
+    });
+
+    if (citations.length > 0 && activeMode === 'assistant') {
+      structuredResponse.sources = citations;
+    }
+
+    const isPlainConversation =
+      activeMode === 'chat'
+        ? true
+        : structuredResponse.intent === 'casual' ||
+          structuredResponse.intent === 'clarifying' ||
+          (!structuredResponse.risk && !structuredResponse.findings && !structuredResponse.recommendation && !structuredResponse.reasoning);
+
+    const assistantMsg: ChatMessage = {
+      id: `msg-${Date.now()}-ai`,
+      conversationId: params.conversationId,
+      role: 'assistant',
+      content: structuredResponse.rawText || structuredResponse.summary,
+      mode: activeMode,
+      structured: isPlainConversation ? undefined : structuredResponse,
+      actions: activeMode === 'chat' ? undefined : structuredResponse.actions,
+      sources: citations.length > 0 && activeMode === 'assistant' ? citations : undefined,
+      metadata: {
+        projectId: params.projectId,
+        contextType: params.contextType,
+        contextId: params.contextId,
+        mode: activeMode,
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    const finalMessages = this.loadMessages();
+    finalMessages.push(assistantMsg);
+    this.saveMessages(finalMessages);
+
+    return {
+      conversationId: params.conversationId,
+      message: assistantMsg,
+      mode: activeMode,
+    };
+  }
+
+  async acceptProposedFinding(messageId: string, findingId: string): Promise<boolean> {
+    const messages = this.loadMessages();
+    const targetMsg = messages.find((m) => m.id === messageId);
+    if (!targetMsg || !targetMsg.structured?.findings) return false;
+
+    const finding = targetMsg.structured.findings.find((f) => f.id === findingId);
+    if (!finding) return false;
+
+    finding.status = 'accepted';
+    this.saveMessages(messages);
+    return true;
+  }
+
+  async rejectProposedFinding(
+    messageId: string,
+    findingId: string,
+    reason: string,
+    comment: string
+  ): Promise<boolean> {
+    const messages = this.loadMessages();
+    const targetMsg = messages.find((m) => m.id === messageId);
+    if (!targetMsg || !targetMsg.structured?.findings) return false;
+
+    const finding = targetMsg.structured.findings.find((f) => f.id === findingId);
+    if (!finding) return false;
+
+    finding.status = 'rejected';
+    finding.rejection_reason = reason;
+    finding.rejection_comment = comment;
+    this.saveMessages(messages);
+    return true;
   }
 }
 

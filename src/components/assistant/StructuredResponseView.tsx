@@ -1,149 +1,189 @@
 import React, { useState } from 'react';
 import { 
-  StructuredAIResponse 
+  StructuredAIResponse,
+  ProposedFinding
 } from '../../types/ai.types';
 import { 
   ShieldAlert, 
   CheckCircle2, 
-  HelpCircle, 
-  Layers, 
   Copy, 
   Check, 
-  Sparkles,
-  ShieldCheck,
-  AlertTriangle
+  Sparkles, 
+  ChevronDown, 
+  ChevronUp, 
+  FileText, 
+  Terminal, 
+  Shield, 
+  Layers
 } from 'lucide-react';
 import { SeverityBadge } from '../findings/SeverityBadge';
 
 interface StructuredResponseViewProps {
   structured: StructuredAIResponse;
+  onAcceptFinding?: (findingId: string) => void;
+  onRejectFinding?: (findingId: string, reason: string, comment: string) => void;
+  onInspectEvidence?: (evidenceId: string) => void;
+  onActionClick?: (action: string, customPrompt?: string) => void;
+  onCreateFindingClick?: () => void;
 }
 
 export const StructuredResponseView: React.FC<StructuredResponseViewProps> = ({
   structured,
+  onAcceptFinding,
+  onRejectFinding,
+  onInspectEvidence,
+  onActionClick,
+  onCreateFindingClick,
 }) => {
-  const [copied, setCopied] = useState(false);
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+  const [showEvidenceDetails, setShowEvidenceDetails] = useState(false);
+  const [showRemediationDetails, setShowRemediationDetails] = useState(false);
 
-  const handleCopy = () => {
-    const textToCopy = `Summary: ${structured.summary}
-${structured.risk ? `Risk: ${structured.risk.level} (${structured.risk.score}/100) - ${structured.risk.text}` : ''}
-Reasoning: ${structured.reasoning}
-Impact: ${structured.impact}
-Recommendation: ${structured.recommendation}
-${structured.suggestedValidation ? `Validation: ${structured.suggestedValidation}` : ''}`;
-    navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+  const finding = structured.findings?.[0];
+  const riskScore = structured.risk?.score || (finding?.severity === 'CRITICAL' ? 92 : finding?.severity === 'HIGH' ? 82 : 55);
+  const severity = structured.risk?.level || finding?.severity || 'HIGH';
+  const priority = severity === 'CRITICAL' ? 'P1 — Immediate' : severity === 'HIGH' ? 'P1' : 'P2';
+  const confidence = structured.confidence || finding?.confidence || 'HIGH';
 
   return (
-    <div className="space-y-3.5 text-xs">
-      {/* Header Summary & Copy */}
-      <div className="flex items-start justify-between gap-3 pb-2.5 border-b border-brand-primary/20">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="p-1 rounded-md bg-brand-primary/20 text-brand-primary">
-              <Sparkles className="w-3.5 h-3.5" />
-            </span>
-            <h4 className="text-sm font-bold text-text-primary tracking-tight">
-              {structured.summary}
-            </h4>
-          </div>
-        </div>
-
-        <button
-          onClick={handleCopy}
-          className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-text-primary px-2 py-1 rounded bg-bg-surface hover:bg-bg-elevated border border-border-dark transition-colors shrink-0"
-          title="Copy structured response"
-        >
-          {copied ? (
-            <>
-              <Check className="w-3 h-3 text-[#22C55E]" />
-              <span className="text-[#22C55E]">Copied</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-3 h-3" />
-              <span>Copy Analysis</span>
-            </>
-          )}
-        </button>
+    <div className="space-y-2.5 text-xs sm:text-sm leading-relaxed text-[#CBD5E1]">
+      
+      {/* LEVEL 1: Conversational Answer / Summary */}
+      <div className="text-[#F8FAFC] font-medium leading-relaxed">
+        {structured.summary || (finding ? `I identified a potential ${finding.category || 'Security Vulnerability'}.` : 'Technical assessment complete.')}
       </div>
 
-      {/* Risk Badge Bar (if provided) */}
-      {structured.risk && (
-        <div className="p-3 rounded-xl bg-bg-surface border border-border-dark flex flex-wrap items-center justify-between gap-3 font-mono">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-text-muted uppercase">Risk Rating:</span>
-            <SeverityBadge severity={structured.risk.level} size="sm" />
-            <span className="text-xs font-bold text-text-primary">
-              {structured.risk.score} <span className="text-[10px] text-text-muted font-normal">/ 100</span>
+      {/* LEVEL 2: Compact Security Metadata Badge Line */}
+      {(structured.risk || finding) && (
+        <div className="flex flex-wrap items-center gap-2 py-1.5 px-3 rounded-xl bg-[#050A14] border border-[#1E293B] text-xs font-mono">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#94A3B8]">Severity:</span>
+            <span className={`font-bold ${
+              severity === 'CRITICAL' ? 'text-[#EF4444]' :
+              severity === 'HIGH' ? 'text-[#F97316]' :
+              severity === 'MEDIUM' ? 'text-[#EAB308]' : 'text-[#22C55E]'
+            }`}>
+              {severity}
             </span>
           </div>
-          <p className="text-[11px] text-text-secondary font-sans">
-            {structured.risk.text}
-          </p>
+          <span className="text-[#1E293B]">•</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#94A3B8]">Risk Score:</span>
+            <span className="font-bold text-[#F8FAFC]">{riskScore}/100</span>
+          </div>
+          <span className="text-[#1E293B]">•</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#94A3B8]">Priority:</span>
+            <span className="font-bold text-[#A78BFA]">{priority}</span>
+          </div>
+          <span className="text-[#1E293B]">•</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#94A3B8]">Confidence:</span>
+            <span className={`font-bold ${
+              confidence === 'CONFIRMED' || confidence === 'HIGH' ? 'text-[#22C55E]' :
+              confidence === 'LIKELY' ? 'text-[#38BDF8]' :
+              confidence === 'POSSIBLE' || confidence === 'MEDIUM' ? 'text-[#EAB308]' : 'text-[#94A3B8]'
+            }`}>
+              {confidence}
+            </span>
+          </div>
         </div>
       )}
 
-      {/* Technical Reasoning */}
-      {structured.reasoning && (
-        <div className="space-y-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-brand-hover font-semibold">
-            Technical Reasoning & Mechanism
-          </span>
-          <p className="p-3 rounded-xl bg-bg-elevated border border-border-dark text-text-secondary leading-relaxed whitespace-pre-line">
-            {structured.reasoning}
-          </p>
-        </div>
-      )}
-
-      {/* Impact */}
+      {/* LEVEL 3: Short Explanation / Core Impact */}
       {structured.impact && (
-        <div className="space-y-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[#F97316] font-semibold flex items-center gap-1">
-            <ShieldAlert className="w-3 h-3" />
-            <span>Threat Impact</span>
-          </span>
-          <p className="p-3 rounded-xl bg-[#F97316]/10 border border-[#F97316]/25 text-text-secondary leading-relaxed whitespace-pre-line">
-            {structured.impact}
-          </p>
+        <p className="text-[#CBD5E1] text-xs sm:text-sm leading-relaxed">
+          {structured.impact}
+        </p>
+      )}
+
+      {/* LEVEL 5: Progressive Disclosure Details (Collapsed by Default) */}
+      {(structured.reasoning || structured.recommendation || (finding && finding.evidence_refs)) && (
+        <div className="space-y-2 pt-1">
+          {/* Toggle Technical Reasoning */}
+          {structured.reasoning && (
+            <div className="border border-[#1E293B] rounded-xl overflow-hidden bg-[#050A14]">
+              <button
+                type="button"
+                onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+                className="w-full px-3 py-2 text-left flex items-center justify-between text-[11px] font-semibold text-[#A78BFA] hover:text-white transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                  <span>Technical Analysis & Exploit Preconditions</span>
+                </div>
+                {showTechnicalDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+
+              {showTechnicalDetails && (
+                <div className="px-3 pb-3 text-xs text-[#CBD5E1] border-t border-[#1E293B] pt-2 space-y-2 font-mono whitespace-pre-wrap leading-relaxed animate-in fade-in">
+                  {structured.reasoning}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Toggle Evidence References */}
+          {finding?.evidence_refs && finding.evidence_refs.length > 0 && (
+            <div className="border border-[#1E293B] rounded-xl overflow-hidden bg-[#050A14]">
+              <button
+                type="button"
+                onClick={() => setShowEvidenceDetails(!showEvidenceDetails)}
+                className="w-full px-3 py-2 text-left flex items-center justify-between text-[11px] font-semibold text-[#3B82F6] hover:text-white transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[#3B82F6]" />
+                  <span>Referenced Evidence Logs ({finding.evidence_refs.length})</span>
+                </div>
+                {showEvidenceDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+
+              {showEvidenceDetails && (
+                <div className="px-3 pb-3 text-xs text-[#CBD5E1] border-t border-[#1E293B] pt-2 space-y-1.5 animate-in fade-in">
+                  <p className="text-[11px] font-mono text-[#94A3B8]">Supporting Evidence Artifacts:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {finding.evidence_refs.map((ref, idx) => (
+                      <span key={idx} className="px-2 py-0.5 rounded bg-[#101827] border border-[#1E293B] font-mono text-[11px] text-[#A78BFA]">
+                        {ref}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Toggle Remediation Code */}
+          {structured.recommendation && (
+            <div className="border border-[#1E293B] rounded-xl overflow-hidden bg-[#050A14]">
+              <button
+                type="button"
+                onClick={() => setShowRemediationDetails(!showRemediationDetails)}
+                className="w-full px-3 py-2 text-left flex items-center justify-between text-[11px] font-semibold text-[#22C55E] hover:text-white transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-[#22C55E]" />
+                  <span>Recommended Defense & Code Fix</span>
+                </div>
+                {showRemediationDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+
+              {showRemediationDetails && (
+                <div className="px-3 pb-3 text-xs text-[#CBD5E1] border-t border-[#1E293B] pt-2 space-y-2 font-mono whitespace-pre-wrap leading-relaxed animate-in fade-in">
+                  {structured.recommendation}
+                  {structured.suggestedValidation && (
+                    <div className="mt-2 p-2 rounded bg-[#101827] border border-[#1E293B] text-[11px] text-[#94A3B8]">
+                      <strong className="text-[#22C55E]">Validation Test: </strong>
+                      {structured.suggestedValidation}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Recommendation */}
-      {structured.recommendation && (
-        <div className="space-y-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[#22C55E] font-semibold flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-            <span>Remediation & Hardening</span>
-          </span>
-          <div className="p-3 rounded-xl bg-[#22C55E]/10 border border-[#22C55E]/25 text-text-secondary leading-relaxed whitespace-pre-line">
-            {structured.recommendation}
-          </div>
-        </div>
-      )}
-
-      {/* Suggested Validation */}
-      {structured.suggestedValidation && (
-        <div className="space-y-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-brand-hover font-semibold flex items-center gap-1">
-            <ShieldCheck className="w-3 h-3" />
-            <span>Validation / Re-Test Methodology</span>
-          </span>
-          <p className="p-2.5 rounded-lg bg-bg-surface border border-border-dark text-[11px] text-text-muted leading-relaxed">
-            {structured.suggestedValidation}
-          </p>
-        </div>
-      )}
-
-      {/* Footer Confidence */}
-      <div className="pt-2 border-t border-border-dark/50 flex items-center justify-between text-[10px] text-text-muted font-mono">
-        <span>HUMAN_IN_THE_LOOP_VERIFIED</span>
-        <span className="flex items-center gap-1">
-          Confidence: <strong className="text-brand-hover">{structured.confidence}</strong>
-        </span>
-      </div>
     </div>
   );
 };

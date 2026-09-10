@@ -83,7 +83,16 @@ export const ProjectsPage: React.FC = () => {
         ) : projects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard 
+                key={project.id} 
+                project={project} 
+                onProjectUpdated={(updated) => {
+                  setProjects((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+                }}
+                onProjectDeleted={(deletedId) => {
+                  setProjects((prev) => prev.filter((p) => p.id !== deletedId));
+                }}
+              />
             ))}
           </div>
         ) : (

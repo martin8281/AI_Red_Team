@@ -3,7 +3,8 @@ export type SourceType =
   | 'GUIDANCE'
   | 'VULNERABILITY_DATABASE'
   | 'INTERNAL_DOCUMENT'
-  | 'METHODOLOGY';
+  | 'METHODOLOGY'
+  | 'DATASET';
 
 export type SourceStatus = 'INDEXED' | 'INDEXING' | 'PENDING' | 'ERROR';
 

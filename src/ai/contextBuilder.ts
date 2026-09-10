@@ -1,6 +1,7 @@
 import { ContextType } from '../types/ai.types';
 import { projectService } from '../services/projectService';
 import { findingService } from '../services/findingService';
+import { projectFileService } from '../services/projectFileService';
 import { SafetySanitizer } from './safetySanitizer';
 
 export interface ResolvedContext {
@@ -10,21 +11,39 @@ export interface ResolvedContext {
   contextId?: string;
   contextSummary: string;
   structuredContext: string;
+  attachedFilesCount: number;
 }
 
 export class ContextBuilder {
   /**
-   * Resolves, verifies, and packages authorized context for the AI Co-Pilot.
+   * Resolves, verifies, and packages authorized context for the AI Co-Pilot,
+   * including mandatory project-attached evidence files and datasets.
    */
   static async buildContext(
     projectId: string,
     contextType: ContextType,
     contextId?: string
   ): Promise<ResolvedContext> {
+    // 0. Handle General Security Consultation (No specific project required)
+    if (contextType === 'general' || projectId === 'general' || !projectId) {
+      return {
+        projectId: 'general',
+        projectName: 'General Security Consultation',
+        contextType: 'general',
+        contextSummary: 'General Security Consultation & Advisory (Open scope)',
+        structuredContext: `ENGAGEMENT_MODE: GENERAL_SECURITY_CONSULTATION
+SCOPE: Open cybersecurity advisory, penetration testing methodologies, vulnerability mechanisms (OWASP Top 10, CWE, CVE), Active Directory/cloud attacks, threat intelligence, and digital forensics guidance.
+No specific target boundary constraints apply. Provide direct, highly technical, and actionable security answers.`,
+        attachedFilesCount: 0,
+      };
+    }
+
     const project = await projectService.getProjectById(projectId);
     if (!project) {
       throw new Error(`Project ${projectId} not found or access unauthorized.`);
     }
+
+    const projectFiles = await projectFileService.getProjectFiles(projectId);
 
     let contextSummary = `Project: ${project.name}`;
     let contextPayload = '';
@@ -165,6 +184,25 @@ AGGREGATE_RISK_SCORE: ${project.riskScore}/100
       }
     }
 
+    // MANDATORY PROJECT ATTACHED EVIDENCE FILES INJECTION
+    if (projectFiles.length > 0) {
+      const filesBlock = projectFiles
+        .map(
+          (pf, idx) => `[ATTACHED PROJECT FILE ${idx + 1}: ${pf.name}] (Category: ${pf.category} | Size: ${pf.size} bytes)
+${pf.description ? `Objective / Description: ${pf.description}\n` : ''}Snippet / Extracted Content:
+${pf.contentSnippet ? pf.contentSnippet.slice(0, 1500) : 'File indexed in project store.'}`
+        )
+        .join('\n\n');
+
+      contextPayload += `\n\n==================================================
+MANDATORY ATTACHED PROJECT EVIDENCE FILES (${projectFiles.length} files attached):
+==================================================
+INSTRUCTION: Before answering any query about this project, you MUST refer to, inspect, and cite these project-attached evidence files (e.g., [File: ${projectFiles[0].name}]). Ground your response in the actual content of these files.
+
+${filesBlock}
+==================================================`;
+    }
+
     return {
       projectId,
       projectName: project.name,
@@ -175,6 +213,7 @@ AGGREGATE_RISK_SCORE: ${project.riskScore}/100
         `${project.name} - ${contextType.toUpperCase()}`,
         contextPayload
       ),
+      attachedFilesCount: projectFiles.length,
     };
   }
 }

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.core.config import settings
 from backend.core.security import RateLimiter, SECURITY_HEADERS
 from backend.api.health import get_system_health, get_assistant_health
+from backend.api.assistant import router as assistant_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -14,6 +15,8 @@ app = FastAPI(
     docs_url="/docs" if settings.ENVIRONMENT == "development" else None,
     redoc_url=None,
 )
+
+app.include_router(assistant_router)
 
 # 1. CORS Configuration
 app.add_middleware(

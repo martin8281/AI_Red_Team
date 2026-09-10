@@ -101,7 +101,7 @@ npm run build
 ## 📂 Project Structure
 
 ```text
-S3_PJ/
+AI-Red-Team-Assistant/
 ├── src/                              # React 18 TypeScript Frontend
 │   ├── assets/                       # Brand icons & Shield SVG logos
 │   ├── auth/                         # JWT Authentication context & session storage

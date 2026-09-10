@@ -11,8 +11,8 @@ export const Footer: React.FC = () => {
           <div className="flex items-center gap-3">
             <ShieldLogo size={26} />
             <div className="flex flex-col">
-              <span className="text-sm font-bold tracking-wider text-text-primary">
-                <span className="text-brand-primary">AI</span> RED TEAM ASSISTANT
+              <span className="text-sm font-bold tracking-wider">
+                <span className="text-brand-primary">AI</span> <span className="text-[#e00000]">RED</span> <span className="text-white">TEAM ASSISTANT</span>
               </span>
               <span className="text-[11px] text-text-muted font-mono tracking-wider">
                 Authorized Security Testing

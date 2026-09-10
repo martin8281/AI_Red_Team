@@ -3,29 +3,31 @@ import { useParams, Link } from 'react-router-dom';
 import { 
   FolderGit2, 
   Layers, 
-  Sparkles, 
   ShieldAlert, 
   FileText, 
   Activity, 
-  ShieldCheck, 
+  Sparkles, 
+  Plus, 
   ArrowLeft, 
   Loader2, 
-  Clock, 
   AlertCircle,
-  Plus 
+  ShieldCheck,
+  HardDrive
 } from 'lucide-react';
 import { Project, ScopeAsset, ProjectActivityItem } from '../types/project.types';
 import { Finding } from '../types/finding.types';
+import { ProjectFile } from '../types/projectFile.types';
 import { projectService } from '../services/projectService';
 import { findingService } from '../services/findingService';
+import { projectFileService } from '../services/projectFileService';
 import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 import { ProjectHeader } from '../components/projects/ProjectHeader';
 import { ProjectStats } from '../components/projects/ProjectStats';
 import { ProjectOverview } from '../components/projects/ProjectOverview';
 import { ScopeManager } from '../components/projects/ScopeManager';
 import { ProjectActivity } from '../components/projects/ProjectActivity';
+import { ProjectFilesManager } from '../components/projects/ProjectFilesManager';
 import { FindingsTable } from '../components/findings/FindingsTable';
-import { SeverityBadge } from '../components/findings/SeverityBadge';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -36,6 +38,7 @@ export const ProjectDetailsPage: React.FC = () => {
   const [scopeAssets, setScopeAssets] = useState<ScopeAsset[]>([]);
   const [activities, setActivities] = useState<ProjectActivityItem[]>([]);
   const [projectFindings, setProjectFindings] = useState<Finding[]>([]);
+  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -46,14 +49,16 @@ export const ProjectDetailsPage: React.FC = () => {
       const proj = await projectService.getProjectById(projectId);
       if (proj) {
         setProject(proj);
-        const [assets, acts, findings] = await Promise.all([
+        const [assets, acts, findings, files] = await Promise.all([
           projectService.getScopeAssets(projectId),
           projectService.getProjectActivities(projectId),
           findingService.getFindingsByProjectId(projectId),
+          projectFileService.getProjectFiles(projectId),
         ]);
         setScopeAssets(assets);
         setActivities(acts);
         setProjectFindings(findings);
+        setProjectFiles(files);
       }
     } catch {
       // handle error
@@ -84,6 +89,7 @@ export const ProjectDetailsPage: React.FC = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: <FolderGit2 className="w-4 h-4" /> },
     { id: 'scope', label: `Scope (${scopeAssets.length})`, icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'files', label: `Files & Evidence (${projectFiles.length})`, icon: <HardDrive className="w-4 h-4" /> },
     { id: 'findings', label: `Findings (${projectFindings.length})`, icon: <Layers className="w-4 h-4" /> },
     { id: 'ai-analysis', label: 'AI Analysis', icon: <Sparkles className="w-4 h-4" /> },
     { id: 'risk', label: 'Risk', icon: <ShieldAlert className="w-4 h-4" /> },
@@ -110,7 +116,7 @@ export const ProjectDetailsPage: React.FC = () => {
           <div className="space-y-1">
             <h3 className="text-base font-bold text-text-primary">Engagement Not Found</h3>
             <p className="text-xs text-text-muted">
-              The project ID "{projectId}" was not found or has been deleted.
+              Project <code className="text-brand-primary">{projectId}</code> could not be located in local or cloud storage.
             </p>
           </div>
           <Button to="/projects" variant="primary" size="sm" icon={<ArrowLeft className="w-4 h-4" />} iconPosition="left">
@@ -129,7 +135,10 @@ export const ProjectDetailsPage: React.FC = () => {
       <div className="space-y-6">
         
         {/* Project Header */}
-        <ProjectHeader project={project} />
+        <ProjectHeader 
+          project={project} 
+          onProjectUpdated={(updated) => setProject(updated)} 
+        />
 
         {/* Project Stats Summary Grid */}
         <ProjectStats project={project} />
@@ -168,6 +177,14 @@ export const ProjectDetailsPage: React.FC = () => {
             onAddAsset={handleAddAsset}
             onUpdateAsset={handleUpdateAsset}
             onDeleteAsset={handleDeleteAsset}
+          />
+        )}
+
+        {activeTab === 'files' && (
+          <ProjectFilesManager
+            projectId={project.id}
+            projectName={project.name}
+            onFilesUpdated={(files) => setProjectFiles(files)}
           />
         )}
 
@@ -302,3 +319,5 @@ export const ProjectDetailsPage: React.FC = () => {
     </DashboardLayout>
   );
 };
+
+export default ProjectDetailsPage;

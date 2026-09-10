@@ -31,8 +31,8 @@ export const Hero: React.FC = () => {
             {/* Headline & Subheading */}
             <div className="space-y-4">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-text-primary leading-[1.15]">
-                <span className="block text-white">AI RED TEAM</span>
-                <span className="block bg-gradient-to-r from-brand-primary via-[#A78BFA] to-brand-secondary bg-clip-text text-transparent">
+                <span className="block"><span className="text-brand-primary">AI</span> <span className="text-[#e00000]">RED</span> <span className="text-white">TEAM</span></span>
+                <span className="block text-white">
                   ASSISTANT
                 </span>
               </h1>

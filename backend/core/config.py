@@ -4,7 +4,11 @@ Loads settings securely from environment variables with strong defaults.
 """
 import os
 from typing import List
-from pydantic_settings import BaseSettings
+
+try:
+    from pydantic_settings import BaseSettings
+except ImportError:
+    from pydantic import BaseModel as BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AI Red Team Assistant"
@@ -28,7 +32,7 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "postgresql://redteam_user:redteam_secure_pass@localhost:5432/redteam_db"
+        "postgresql://postgres:postgres@localhost:5432/ai_red_team"
     )
 
     # Local AI & Embedding Configuration

@@ -53,8 +53,8 @@ export const AIAssistantCard: React.FC<AIAssistantCardProps> = ({ onReviewFindin
                 <Cpu className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm sm:text-base font-bold text-text-primary flex items-center gap-1.5">
-                  <span>AI Red Team Assistant</span>
+                <h3 className="text-sm sm:text-base font-bold flex items-center gap-1.5">
+                  <span><span className="text-brand-primary">AI</span> <span className="text-[#e00000]">Red</span> <span className="text-white">Team Assistant</span></span>
                   <Badge variant="brand" size="sm" dot pulse>
                     CO-PILOT
                   </Badge>

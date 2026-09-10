@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   to?: string;
   href?: string;
@@ -36,6 +36,7 @@ export const Button: React.FC<ButtonProps> = ({
     secondary: "bg-bg-elevated hover:bg-bg-hover text-text-primary border border-border-dark hover:border-brand-primary/40 active:scale-[0.98]",
     outline: "bg-transparent hover:bg-bg-hover text-text-primary border border-border-dark hover:border-brand-primary/60 active:scale-[0.98]",
     ghost: "bg-transparent hover:bg-bg-hover/60 text-text-secondary hover:text-text-primary active:scale-[0.98]",
+    danger: "bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 hover:border-red-500/50 active:scale-[0.98]",
   };
 
   const combinedStyles = `${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${fullWidth ? 'w-full' : ''} ${className}`;

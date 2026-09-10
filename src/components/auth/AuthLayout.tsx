@@ -47,12 +47,12 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         
         {/* Brand Header */}
         <div className="text-center space-y-3 mb-6">
-          <Link to="/" className="inline-flex items-center justify-center p-2.5 rounded-2xl bg-bg-card border border-border-dark shadow-xl hover:border-brand-primary/40 transition-colors">
-            <ShieldLogo size={36} />
+          <Link to="/" className="inline-flex items-center justify-center transition-transform hover:scale-105">
+            <ShieldLogo size={44} />
           </Link>
           <div>
-            <span className="text-xs font-mono font-bold tracking-widest text-text-muted uppercase block">
-              <span className="text-brand-primary">AI</span> RED TEAM ASSISTANT
+            <span className="text-xs font-mono font-bold tracking-widest uppercase block">
+              <span className="text-brand-primary">AI</span> <span className="text-[#e00000]">RED</span> <span className="text-white">TEAM ASSISTANT</span>
             </span>
             <h1 className="text-2xl font-extrabold text-text-primary tracking-tight mt-1">
               {title}

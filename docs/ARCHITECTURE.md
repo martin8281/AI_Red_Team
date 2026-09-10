@@ -2,6 +2,61 @@
 
 This document provides complete architectural specifications, data flow diagrams (DFD Level 0 & Level 1), entity-relationship (ER) models, use case representations, AI/RAG grounding workflows, and production deployment topologies for the **AI Red Team Assistant**.
 
+## 0. Host Topology & Context-Aware RAG Blueprint
+
+```text
+Windows 10
+│
+├── WSL 2
+│    └── Ubuntu
+│
+├── Docker Desktop
+│    └── PostgreSQL 18 (with pgvector)
+│         └── ai_red_team
+│
+├── Ollama
+│    └── Qwen3 14B & nomic-embed-text
+│
+└── AI Red Team Assistant
+     ├── React 18 (Vite SPA :3000)
+     └── FastAPI (ASGI Gateway :8000)
+
+
+                    ┌─────────────────────┐
+                    │      User           │
+                    └──────────┬──────────┘
+                               ↓
+                    ┌─────────────────────┐
+                    │  AI Security Chat   │
+                    └──────────┬──────────┘
+                               ↓
+              ┌────────────────┼────────────────┐
+              ↓                ↓                ↓
+        Project Context    Documents        Findings
+              │                │                │
+              │                ↓                │
+              │          Document Parser        │
+              │                ↓                │
+              │          Chunking + Metadata    │
+              │                ↓                │
+              │        Ollama Embeddings        │
+              │                ↓                │
+              │          pgvector RAG           │
+              └────────────────┼────────────────┘
+                               ↓
+                     Relevant Context
+                               ↓
+                    ┌─────────────────────┐
+                    │   Ollama Qwen3 14B  │
+                    └──────────┬──────────┘
+                               ↓
+                    Grounded AI Response
+                               ↓
+                 ┌─────────────┴────────────┐
+                 ↓                          ↓
+             Answer                     Sources
+```
+
 ---
 
 ## 1. High-Level System Architecture
