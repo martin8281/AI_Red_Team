@@ -60,7 +60,8 @@ export type ResponseIntentType =
   | 'casual'
   | 'clarifying'
   | 'full_assessment'
-  | 'specific_query';
+  | 'specific_query'
+  | 'error';
 
 export type AIActionType =
   | 'create_finding'

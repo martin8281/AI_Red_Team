@@ -73,56 +73,7 @@ class AIService:
             correlated_events = self.correlation_engine.correlate(session.all_log_records)
             SessionContextStore.save_correlation_clusters(conv_id, correlated_events)
 
-        # 4. Instant Replies for pure greetings / thanks (ONLY true greetings / thanks, no canned technical answers)
-        if not quick_action and not attachments and len(session.uploaded_files) == 0:
-            is_general = project_id == "PRJ-GENERAL" or "general" in project_name.lower()
-            is_greeting = any(re.search(p, lower_msg, re.IGNORECASE) for p in IntentClassifier.CASUAL_PATTERNS[:1]) or lower_msg in ["hi", "hii", "hello", "hey", ""]
-            is_thanks = any(w in lower_msg for w in ["thanks", "thank you", "thx", "cheers", "awesome", "great", "perfect"])
-
-            if is_greeting:
-                if active_mode == "chat":
-                    if is_general:
-                        reply = (
-                            "Hello! 👋 How can I help you today?\n\n"
-                            "I'm your **AI Red Team Assistant**. Feel free to ask me anything about:\n"
-                            "- **Vulnerability Mechanisms**: Explaining OWASP Top 10, SSRF, SQLi, IDOR, Broken Auth, etc.\n"
-                            "- **Active Directory & Infrastructure**: Kerberoasting, Pass-the-Hash, AS-REP roasting, DCSync.\n"
-                            "- **Secure Coding & Defense**: Practical code snippets and remediations in Python, TypeScript, Go, etc.\n"
-                            "- **Forensic Logs & Triaging**: Analyzing incident logs and indicators of compromise.\n\n"
-                            "What would you like to explore?"
-                        )
-                    else:
-                        reply = (
-                            f"Hello! 👋 How can I help you with **{project_name}** today?\n\n"
-                            "We can discuss scope boundaries, review potential security concerns, explore validation test procedures, "
-                            "or answer any technical cybersecurity questions. What would you like to focus on?"
-                        )
-                else:
-                    target_desc = 'General Security Consultation' if is_general else project_name
-                    reply = (
-                        f"Hello! 👋 **Assistant Mode** is active for **{target_desc}**.\n\n"
-                        "I am calibrated to provide grounded findings, 7-factor threat risk scoring, evidence correlation, and structured audit reporting.\n\n"
-                        "How would you like to proceed?"
-                    )
-                return {
-                    "intent": "casual",
-                    "summary": reply,
-                    "raw_text": reply
-                }
-
-            if is_thanks:
-                reply = (
-                    "You're very welcome! 😊 Ready to evaluate risk, suggest tests, or explore findings whenever you need."
-                    if active_mode == "assistant"
-                    else "You're very welcome! 😊 Let me know whenever you'd like to explore another topic, analyze code, or investigate further."
-                )
-                return {
-                    "intent": "casual",
-                    "summary": reply,
-                    "raw_text": reply
-                }
-
-        # 5. Run RAG Retrieval (Semantic pgvector lookup on Knowledge Base for technical queries)
+        # 4. Run RAG Retrieval (Semantic pgvector lookup on Knowledge Base for technical queries)
         rag_route = RAGRouter.classify_intent(message)
         retrieved_sources: List[Dict[str, Any]] = []
         knowledge_context_str = ""

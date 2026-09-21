@@ -4,7 +4,8 @@ import {
   AssistantChatRequest, 
   AssistantChatResponse, 
   ContextType,
-  ConversationMode
+  ConversationMode,
+  StructuredAIResponse
 } from '../types/ai.types';
 import { ContextBuilder } from '../ai/contextBuilder';
 import { PromptManager } from '../ai/promptManager';
@@ -356,16 +357,16 @@ class AIService {
       combinedContext += `\n\n### RETRIEVED AUTHORITATIVE KNOWLEDGE:\n${knowledgeContext}`;
     }
 
-    // 7. Generate structured response with CUMULATIVE session files and active mode
-    const structuredResponse = await MockAiProvider.generate({
-      projectName: resolvedContext.projectName,
-      contextType: params.contextType,
-      contextId: params.contextId,
-      contextText: combinedContext,
-      userMessage: params.message,
-      quickAction: params.quickAction,
+    // 6. Generate structured response with CUMULATIVE session files and active mode via Backend Ollama
+    const structuredResponse = await this.callBackendChatApi({
+      conversation_id: finalConversationId,
+      project_id: params.projectId,
+      context_type: params.contextType,
+      context_id: params.contextId,
+      message: params.message,
       mode: activeMode,
-      attachments: sessionMemory.uploadedFiles, // Multi-turn cumulative files
+      quick_action: params.quickAction as string | undefined,
+      attachments: sessionMemory.uploadedFiles,
     });
 
     // If mode switched on this turn, prepend single-line confirmation if not already included
@@ -399,7 +400,7 @@ class AIService {
       );
     }
 
-    // 8. Determine whether to attach structured card or plain conversational text
+    // 7. Determine whether to attach structured card or plain conversational text
     // In Normal Chat mode: ALWAYS plain conversational text unless user specifically requested a quickAction or structured report
     const isPlainConversation =
       activeMode === 'chat'
@@ -433,6 +434,63 @@ class AIService {
       message: assistantMsg,
       mode: activeMode,
     };
+  }
+
+  private async callBackendChatApi(payload: {
+    conversation_id?: string;
+    project_id: string;
+    context_type: string;
+    context_id?: string;
+    message: string;
+    mode?: string;
+    quick_action?: string;
+    attachments?: any[];
+  }): Promise<StructuredAIResponse> {
+    try {
+      const response = await fetch('/api/assistant/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errText}`);
+      }
+
+      const data = await response.json();
+      const res = data.structured_response || {};
+      return {
+        summary: res.summary || res.raw_text || (res.findings ? 'Structured analysis complete.' : ''),
+        rawText: res.raw_text || res.summary || '',
+        findings: res.findings,
+        correlated_events: res.correlated_events,
+        confidence: res.confidence || 'HIGH',
+        intent: res.intent || (payload.mode === 'chat' ? 'chat' : 'general_analysis'),
+        risk: res.risk,
+        reasoning: res.reasoning,
+        impact: res.impact,
+        recommendation: res.recommendation,
+        suggestedValidation: res.suggestedValidation,
+        sources: res.sources,
+        actions: res.actions || (payload.mode === 'assistant' ? [
+          { id: 'create-finding', label: 'Create Finding', type: 'create_finding', variant: 'primary' },
+          { id: 'analyze-risk', label: 'Analyze Risk', type: 'analyze_risk', variant: 'secondary' },
+          { id: 'suggest-tests', label: 'Suggest Tests', type: 'suggest_tests', variant: 'secondary' }
+        ] : []),
+      };
+    } catch (err: any) {
+      const errMsg = err?.message || 'Connection refused';
+      return {
+        intent: 'error',
+        summary: `AI engine unavailable: ${errMsg}`,
+        rawText: `AI engine unavailable: Could not communicate with backend Ollama AI service (${errMsg}). Please ensure the backend and Ollama server ('ollama serve') are running.`,
+        confidence: 'LOW',
+        actions: [],
+      };
+    }
   }
 
   async editAndRegenerateMessage(params: {
@@ -530,12 +588,12 @@ class AIService {
     let currentConv = conversations.find((c) => c.id === params.conversationId);
     const activeMode: ConversationMode = currentConv?.mode || 'chat';
 
-    const structuredResponse = await MockAiProvider.generate({
-      projectName: resolvedContext.projectName,
-      contextType: params.contextType,
-      contextId: params.contextId,
-      contextText: combinedContext,
-      userMessage: params.newMessage,
+    const structuredResponse = await this.callBackendChatApi({
+      conversation_id: params.conversationId,
+      project_id: params.projectId,
+      context_type: params.contextType,
+      context_id: params.contextId,
+      message: params.newMessage,
       mode: activeMode,
       attachments: sessionMemory.uploadedFiles,
     });
