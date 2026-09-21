@@ -42,15 +42,17 @@ class IntentClassifier:
 
     # Regex patterns for FULL ASSESSMENT
     FULL_ASSESSMENT_PATTERNS = [
-        r"(analyze|assess)\s+(this|the)\s+(entire\s+)?project",
+        r"(analyze|assess)\s+(this|the)\s+(entire\s+)?(project|engagement)",
         r"(give|provide|show)\s+me\s+(the\s+)?full\s+(risk\s+)?assessment",
         r"comprehensive\s+(analysis|assessment|audit|review)",
         r"generate\s+(an?\s+)?(engagement\s+)?(report|deliverable)",
         r"threat\s+model(ing)?\s+(review|assessment|analysis)",
         r"(overall|full|complete)\s+(risk\s+)?(posture|evaluation|summary)",
-        r"executive\s+summary\s+of\s+(the\s+)?project",
+        r"executive\s+summary\s+of\s+(the\s+)?(project|engagement)",
         r"full\s+security\s+audit",
-        r"audit\s+(this|the)\s+project",
+        r"audit\s+(this|the)\s+(project|engagement)",
+        r"(main|all)\s+security\s+findings",
+        r"prepare\s+(the\s+)?(main\s+)?findings",
     ]
 
     # Regex patterns for SPECIFIC QUERY

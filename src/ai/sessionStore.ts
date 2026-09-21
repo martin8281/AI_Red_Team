@@ -55,6 +55,17 @@ export class SessionContextStore {
   }
 
   /**
+   * Clears the cumulative session memory state for a given conversation.
+   */
+  static clearSession(conversationId: string): void {
+    try {
+      localStorage.removeItem(`${STORAGE_PREFIX}${conversationId}`);
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
    * Registers a new user turn: persists new files and extracts stated constraints.
    */
   static registerTurn(

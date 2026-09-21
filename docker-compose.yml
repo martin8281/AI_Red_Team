@@ -33,6 +33,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-jwt-signing-secret-change-in-production-2026}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:14b}
+      OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-120.0}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
       ENVIRONMENT: production
     ports:

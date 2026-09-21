@@ -49,6 +49,15 @@ export interface Finding {
   dueDate?: string;
   remediationStatus?: 'NOT_STARTED' | 'IN_PROGRESS' | 'FIXED' | 'VERIFIED' | 'REJECTED';
   resolutionNotes?: string;
+  cveId?: string;
+  cweId?: string;
+  cvssScore?: number;
+  cvssVector?: string;
+  mitreAttack?: string;
+  owaspCategory?: string;
+  verificationStatus?: 'UNREVIEWED' | 'REVIEWED' | 'VERIFIED' | 'REJECTED';
+  verifiedBy?: string;
+  verifiedAt?: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

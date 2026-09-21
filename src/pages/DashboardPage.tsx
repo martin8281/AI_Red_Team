@@ -233,16 +233,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     const medCount = rawFindings.filter((f) => f.severity === 'MEDIUM').length;
     const lowCount = rawFindings.filter((f) => f.severity === 'LOW').length;
 
-    // Weighted risk computation
-    const totalWeighted = (critCount * 30) + (highCount * 18) + (medCount * 8) + (lowCount * 2);
-    const normalizedScore = rawProjects.length > 0 
-      ? Math.min(96, Math.max(15, Math.round(totalWeighted / Math.max(1, rawProjects.length * 0.7)))) 
+    // Unified authoritative portfolio risk formula: 60% highest finding score + 40% average finding score
+    const riskScores = rawFindings.map((f) => f.riskScore).filter((r) => r > 0);
+    const averageScore = riskScores.length > 0 ? Math.round(riskScores.reduce((a, b) => a + b, 0) / riskScores.length) : 0;
+    const maxScore = riskScores.length > 0 ? Math.max(...riskScores) : 0;
+    const normalizedScore = riskScores.length > 0 
+      ? Math.min(100, Math.round(maxScore * 0.6 + averageScore * 0.4)) 
       : 0;
 
     const status: RiskScoreData['status'] = 
       normalizedScore >= 75 ? 'CRITICAL' :
       normalizedScore >= 50 ? 'HIGH' :
-      normalizedScore >= 25 ? 'MODERATE' : 'LOW';
+      normalizedScore >= 30 ? 'MODERATE' : 'LOW';
 
     return {
       score: normalizedScore,
@@ -257,7 +259,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         { label: 'Network & Perimeter', value: lowCount * 5, color: '#22C55E' },
       ],
     };
-  }, [rawFindings, rawProjects]);
+  }, [rawFindings]);
 
   // Dynamic Severity Distribution
   const dynamicRiskDistribution: RiskDistributionItem[] = useMemo(() => {

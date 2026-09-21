@@ -156,6 +156,19 @@ class FindingService {
       }
     }
 
+    // Duplicate detection: check if non-resolved finding with same project, endpoint/asset and vulnerability exists
+    const existing = list.find(
+      (f) =>
+        f.projectId === findingData.projectId &&
+        f.vulnerabilityType === findingData.vulnerabilityType &&
+        (f.endpoint === findingData.endpoint || f.asset === findingData.asset) &&
+        f.title.toLowerCase().trim() === findingData.title.toLowerCase().trim() &&
+        f.status !== 'RESOLVED'
+    );
+    if (existing) {
+      return existing;
+    }
+
     const newFinding: Finding = {
       ...findingData,
       projectName: projectName || 'General Pentest',

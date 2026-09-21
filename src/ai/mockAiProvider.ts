@@ -388,7 +388,32 @@ How would you like to proceed?`,
       };
     }
 
-    // 4. SPECIFIC ACTION: SUGGEST TESTS
+    // 4. SCOPE BOUNDARY CHECK & REFUSAL FOR OUT-OF-SCOPE TARGETS
+    if (
+      lowerMsg.includes('prod-db.internal') ||
+      lowerMsg.includes('10.10.20.') ||
+      lowerMsg.includes('admin.apexfin.com') ||
+      (lowerMsg.includes('out of scope') && lowerMsg.includes('attack')) ||
+      (lowerMsg.includes('test') && lowerMsg.includes('unauthorized'))
+    ) {
+      return {
+        intent: 'specific_query',
+        summary: "Target is OUT_OF_SCOPE. Testing is strictly prohibited.",
+        impact: "Security testing against unauthorized assets violates engagement Rules of Engagement and authorization boundaries.",
+        reasoning: `Scope Boundary Enforcement:
+- The requested target is explicitly listed in EXCLUDED_OUT_OF_SCOPE_TARGETS for ${projectName}.
+- Authorized testing is strictly limited to authorized in-scope assets (e.g., api.apexfin.com, auth.apexfin.com, 10.10.10.0/24).
+- Testing actions or payload suggestions for this host are blocked by policy.`,
+        recommendation: 'Verify target scope in the Projects & Scope module before conducting assessments.',
+        confidence: 'CONFIRMED',
+        actions: [
+          { id: 'view-scope', label: 'View Authorized Scope', type: 'view_scope', variant: 'secondary' },
+          { id: 'suggest-tests', label: 'Suggest In-Scope Tests', type: 'suggest_tests', variant: 'primary' },
+        ],
+      };
+    }
+
+    // 5. SPECIFIC ACTION: SUGGEST TESTS (Contextual, non-destructive, finding-aware)
     if (
       quickAction === 'suggest_tests' ||
       lowerMsg.includes('suggest tests') ||
@@ -396,6 +421,41 @@ How would you like to proceed?`,
       lowerMsg.includes('validation tests') ||
       lowerMsg.includes('how to test')
     ) {
+      const isSSRF = lowerMsg.includes('ssrf') || contextText.toLowerCase().includes('ssrf') || contextText.toLowerCase().includes('forgery');
+      const isXSS = lowerMsg.includes('xss') || contextText.toLowerCase().includes('xss') || contextText.toLowerCase().includes('cross-site');
+      const isIDOR = lowerMsg.includes('idor') || contextText.toLowerCase().includes('idor') || contextText.toLowerCase().includes('direct object');
+      const isAuth = lowerMsg.includes('auth') || contextText.toLowerCase().includes('jwt') || contextText.toLowerCase().includes('password');
+
+      let testTitle = "Controlled SQL Injection Validation Steps:";
+      let testSteps = `1. Identify Parameter: Confirm tainted parameter (e.g., 'username') on in-scope endpoint /api/v1/auth.
+2. Controlled Benign Probe: Submit single quote boundary string \`admin'probe\` and observe response code.
+3. Compare Behavior: Verify if server returns HTTP 400 Bad Request (handled) vs HTTP 500 / SQL syntax error (vulnerable).
+4. Review Application Logs: Check database server query logs to confirm input is treated as literal parameter binding.
+5. Preserve Evidence: Record HTTP request/response headers and response body for audit verification.`;
+
+      if (isSSRF) {
+        testTitle = "Controlled SSRF Validation Steps:";
+        testSteps = `1. Identify URL Parameter: Confirm destination parameter (e.g., 'webhook_url' or 'avatar_url') on authorized in-scope endpoint.
+2. Loopback & Metadata Probes: Submit internal loopback \`http://127.0.0.1:80\` and AWS metadata IP \`http://169.254.169.254/latest/meta-data/\`.
+3. Verify Boundary Defense: Assert server actively rejects private subnets with HTTP 400/403 and does not establish outbound connections.
+4. Test Redirect Handling: Verify that external URLs redirecting to internal private subnets are blocked.
+5. Record Evidence: Log egress network firewall telemetry and server response status.`;
+      } else if (isXSS) {
+        testTitle = "Controlled Reflected XSS Validation Steps:";
+        testSteps = `1. Identify Reflection Point: Confirm input parameter reflected in response HTML/DOM body.
+2. Harmless Marker Probe: Submit non-executable benign marker string \`test_poc_marker_<xyz>\`.
+3. Inspect Context Encoding: Verify if characters \`<\`, \`>\`, \`"\`, \`'\` are entity-encoded (\`&lt;\`, \`&gt;\`).
+4. Validate CSP: Check for strict Content-Security-Policy headers (e.g., \`default-src 'self'\`).
+5. Record Evidence: Capture response source code showing encoded vs unencoded reflection.`;
+      } else if (isIDOR) {
+        testTitle = "Controlled IDOR / Authorization Validation Steps:";
+        testSteps = `1. Setup Authorized Accounts: Prepare two authorized test accounts (Tenant User A and Tenant User B).
+2. Resource Access Probe: With User B session token, request object belonging to User A (e.g., GET /api/v1/users/usr-101/data).
+3. Assert Server Enforcement: Verify server returns HTTP 403 Forbidden without disclosing tenant data.
+4. State Mutation Check: Verify POST/PUT/DELETE mutations strictly enforce tenant ownership validation.
+5. Record Evidence: Document authorization failure response headers and audit logs.`;
+      }
+
       const testActions: AIAction[] = [
         { id: 'explain-test', label: 'Explain Test', type: 'explain_test', variant: 'secondary' },
         { id: 'show-expected-result', label: 'Show Expected Result', type: 'show_expected_result', variant: 'secondary' },
@@ -404,14 +464,10 @@ How would you like to proceed?`,
 
       return {
         intent: 'specific_query',
-        summary: "I recommend these controlled validation steps:",
-        impact: "Execute these non-destructive tests to verify whether user input reaches the database SQL parser without causing downtime.",
-        reasoning: `Controlled Validation Test Steps:
-1. Verify whether user input reaches the database query (send benign boundary string \`test'probe\`).
-2. Review parameterized query implementation in the repository data layer.
-3. Validate authentication behavior under malformed parameter conditions.
-4. Review application logs during testing for syntax error leakage or unhandled 500 responses.`,
-        recommendation: 'Ensure all tests remain non-destructive and adhere to authorized testing windows.',
+        summary: `I recommend these controlled, non-destructive validation steps for ${projectName}:`,
+        impact: "Execute these safe testing procedures to verify exploit preconditions without causing operational disruption or unauthorized access.",
+        reasoning: `${testTitle}\n${testSteps}`,
+        recommendation: 'Ensure all tests remain non-destructive and adhere strictly to authorized testing windows.',
         suggestedValidation: 'Verify that invalid payloads return standard HTTP 400 Bad Request with zero database syntax leakage.',
         confidence: 'CONFIRMED',
         actions: testActions,

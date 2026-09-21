@@ -179,6 +179,13 @@ export const AssistantPage: React.FC = () => {
     }
   };
 
+  const handleClearConversation = async () => {
+    if (activeConversationId) {
+      await aiService.clearConversationMessages(activeConversationId);
+    }
+    setMessages([]);
+  };
+
   // Scroll to bottom on new messages
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -762,7 +769,7 @@ export const AssistantPage: React.FC = () => {
                 onSendMessage={(text, atts) => handleSendMessage(text, atts)}
                 isLoading={isLoading}
                 hasMessages={messages.length > 0}
-                onClearConversation={() => setMessages([])}
+                onClearConversation={handleClearConversation}
               />
             </div>
           </div>

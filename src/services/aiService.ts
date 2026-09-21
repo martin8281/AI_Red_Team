@@ -130,6 +130,13 @@ class AIService {
     return all.filter((m) => m.conversationId === conversationId);
   }
 
+  async clearConversationMessages(conversationId: string): Promise<void> {
+    let messages = this.loadMessages();
+    messages = messages.filter((m) => m.conversationId !== conversationId);
+    this.saveMessages(messages);
+    SessionContextStore.clearSession(conversationId);
+  }
+
   async setConversationMode(conversationId: string, mode: ConversationMode): Promise<Conversation | null> {
     const list = this.loadConversations();
     const conv = list.find((c) => c.id === conversationId);

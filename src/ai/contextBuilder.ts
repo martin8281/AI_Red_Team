@@ -165,6 +165,8 @@ ${flattened
       default: {
         const findings = await findingService.getFindingsByProjectId(projectId);
         const scopeAssets = await projectService.getScopeAssets(projectId);
+        const inScope = scopeAssets.filter((a) => a.scopeStatus === 'IN_SCOPE');
+        const outOfScope = scopeAssets.filter((a) => a.scopeStatus === 'OUT_OF_SCOPE');
 
         contextSummary = `Entire Project: ${project.name}`;
         contextPayload = `
@@ -176,7 +178,12 @@ LEAD_TESTER: ${project.leadTester || 'Alex Vance'}
 ENGAGEMENT_OBJECTIVES:
 ${project.description}
 
-TOTAL_SCOPE_ASSETS: ${scopeAssets.length} (${scopeAssets.filter((a) => a.scopeStatus === 'IN_SCOPE').length} in-scope)
+AUTHORIZED_IN_SCOPE_TARGETS:
+${inScope.map((a) => `- [${a.assetType}] ${a.value} (${a.description || 'Authorized Target'})`).join('\n') || 'None'}
+
+EXCLUDED_OUT_OF_SCOPE_TARGETS:
+${outOfScope.map((a) => `- [${a.assetType}] ${a.value} (${a.description || 'Explicitly Excluded Target'})`).join('\n') || 'None'}
+
 TOTAL_LOGGED_FINDINGS: ${findings.length}
 AGGREGATE_RISK_SCORE: ${project.riskScore}/100
 `;

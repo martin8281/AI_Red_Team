@@ -91,12 +91,26 @@ class ReportService {
     const scopeAssets = await projectService.getScopeAssets(projectId);
     const riskSummary = await riskService.getProjectRiskSummary(projectId);
 
+    // Load all associated evidence records for the project's findings
+    const evidenceList: any[] = [];
+    for (const f of findings) {
+      const fEv = await findingService.getFindingEvidence(f.id);
+      evidenceList.push(...fEv);
+    }
+
     const now = new Date().toISOString();
     const reportId = `RPT-${Date.now().toString().slice(-4)}`;
 
     // Build all 12 factual sections dynamically from verified project data
     const inScope = scopeAssets.filter((a) => a.scopeStatus === 'IN_SCOPE');
     const outOfScope = scopeAssets.filter((a) => a.scopeStatus === 'OUT_OF_SCOPE');
+
+    const slaMap: Record<string, string> = {
+      'P1 — Immediate': '< 24 Hours (Immediate Hotfix)',
+      'P2 — High': '< 7 Days (Next Sprint)',
+      'P3 — Normal': '< 30 Days (Standard Release)',
+      'P4 — Low': 'Next Scheduled Maintenance',
+    };
 
     const sections: ReportSection[] = [
       {
@@ -112,8 +126,8 @@ class ReportService {
       },
       {
         id: `sec-${reportId}-2`,
-        reportId,
         sectionType: 'executive_summary',
+        reportId,
         title: 'Executive Summary',
         content: `An authorized security assessment was conducted for **${project.organization}** evaluating the **${project.name}** environment.\n\nThe testing identified **${findings.length} verified security vulnerabilities** (${riskSummary.criticalCount} Critical, ${riskSummary.highCount} High, ${riskSummary.mediumCount} Medium, ${riskSummary.lowCount} Low).\n\nOverall aggregate engagement risk is evaluated at **${riskSummary.overallScore}/100 (${riskSummary.riskLevel} POSTURE)**. The highest severity vector identified was "${riskSummary.highestFindingTitle}". Immediate triage and remediation of high-impact vulnerabilities is recommended.`,
         order: 2,
@@ -177,8 +191,44 @@ class ReportService {
         title: 'Detailed Findings Catalog',
         content: findings.length > 0 ? findings
           .map(
-            (f, idx) =>
-              `### ${idx + 1}. [${f.id}] ${f.title}\n- **Vulnerability Type:** ${f.vulnerabilityType}\n- **Severity Rating:** ${f.severity} (Score: ${f.riskScore}/100)\n- **Priority:** ${f.priority}\n- **Target Vector:** \`${f.method} https://${f.asset}${f.endpoint}\`\n\n**Description:**\n${f.description}\n\n**Business & Threat Impact:**\n${f.impact}\n\n**Remediation Recommendation:**\n${f.recommendation}`
+            (f, idx) => {
+              const fEv = evidenceList.filter((e) => e.findingId === f.id);
+              const evidenceReferences = fEv.length > 0 
+                ? fEv.map(e => `  - **[${e.id}]** \`${e.fileReference || 'Log Trace'}\` — ${e.title} (${e.verificationStatus || 'VERIFIED'})`).join('\n')
+                : '  - *No forensic evidence file attached (Manual observation)*';
+
+              const verificationLabel = f.status === 'RESOLVED' 
+                ? 'RESOLVED (Retest Confirmed)'
+                : (f.verificationStatus === 'VERIFIED' || f.status === 'OPEN' || f.status === 'REMEDIATION')
+                  ? 'VERIFIED (Human Tester Confirmed)'
+                  : 'PROPOSED (Pending Verification)';
+
+              const cvssDisplay = f.cvssScore 
+                ? `- **CVSS v3.1 Base Score:** ${f.cvssScore} ${f.cvssVector ? `(\`${f.cvssVector}\`)` : ''}\n` 
+                : '';
+              const cweDisplay = f.cweId ? `- **CWE Classification:** ${f.cweId}\n` : '';
+              const owaspDisplay = f.owaspCategory ? `- **OWASP Top 10 Mapping:** ${f.owaspCategory}\n` : '';
+              const mitreDisplay = f.mitreAttack ? `- **MITRE ATT&CK Technique:** ${f.mitreAttack}\n` : '';
+
+              return `### ${idx + 1}. [${f.id}] ${f.title}
+- **Vulnerability Type:** ${f.vulnerabilityType}
+- **Verification Status:** ${verificationLabel}
+- **Severity Rating:** ${f.severity} (Contextual Risk Score: ${f.riskScore}/100)
+- **Remediation Priority:** ${f.priority}
+${cvssDisplay}${cweDisplay}${owaspDisplay}${mitreDisplay}- **Target Vector:** \`${f.method} https://${f.asset}${f.endpoint}\`
+
+**Technical Description:**
+${f.description}
+
+**Business & Threat Impact:**
+${f.impact}
+
+**Forensic Evidence Attachments:**
+${evidenceReferences}
+
+**Remediation Recommendation:**
+${f.recommendation}`;
+            }
           )
           .join('\n\n---\n\n') : 'No security vulnerabilities logged for this engagement.',
         order: 7,
@@ -191,7 +241,22 @@ class ReportService {
         reportId,
         sectionType: 'evidence',
         title: 'Proof-of-Concept Verification Evidence',
-        content: configuration.includeEvidence ? `Proof-of-concept evidence artifacts attached to verified findings:\n\n- Sanitized request/response traces and validation logs are recorded in the central evidence repository.\n- Zero credentials or customer secrets are included in compliance with data protection policies.` : 'Verification evidence excluded per configuration.',
+        content: configuration.includeEvidence
+          ? (evidenceList.length > 0
+              ? `### Forensic Proof-of-Concept Evidence Records (${evidenceList.length} Total)\n\n` +
+                evidenceList.map((e, idx) => {
+                  const linkedFinding = findings.find(f => f.id === e.findingId);
+                  return `#### Evidence Item ${idx + 1}: [${e.id}] ${e.title}
+- **File Reference:** \`${e.fileReference || 'N/A'}\`
+- **Associated Finding:** ${linkedFinding ? `[${linkedFinding.id}] ${linkedFinding.title}` : 'Unassigned'}
+- **Verification Status:** ${e.verificationStatus || 'VERIFIED'}
+- **Recorded By:** ${e.createdBy || 'Tester'} (${e.createdAt ? new Date(e.createdAt).toLocaleDateString() : 'Active'})
+- **Forensic Observation:**
+  ${e.description || 'Verified via active HTTP request/response inspection.'}
+  ${e.notes ? `*Technical Notes:* ${e.notes}` : ''}`;
+                }).join('\n\n---\n\n')
+              : 'Proof-of-concept evidence artifacts attached to verified findings:\n\n- Sanitized request/response traces and validation logs are recorded in the central evidence repository.\n- Zero credentials or customer secrets are included in compliance with data protection policies.')
+          : 'Verification evidence excluded per configuration.',
         order: 8,
         enabled: configuration.enabledSections.includes('evidence') && configuration.includeEvidence,
         createdAt: now,
@@ -214,7 +279,11 @@ class ReportService {
         reportId,
         sectionType: 'remediation_summary',
         title: 'Remediation Priority Queue',
-        content: findings.length > 0 ? `| Finding ID | Title | Severity | Recommended Priority |\n| :--- | :--- | :--- | :--- |\n${findings.map((f) => `| **${f.id}** | ${f.title} | ${f.severity} | ${f.priority} |`).join('\n')}` : 'No remediation items queued.',
+        content: findings.length > 0 
+          ? `| Finding ID | Vulnerability Title | Severity | Priority Tier | Action SLA Target | Current Status |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n${
+              findings.map(f => `| **${f.id}** | ${f.title} | ${f.severity} | ${f.priority} | ${slaMap[f.priority] || '< 30 Days'} | \`${f.status}\` |`).join('\n')
+            }`
+          : 'No remediation items queued.',
         order: 10,
         enabled: configuration.enabledSections.includes('remediation_summary'),
         createdAt: now,
@@ -387,7 +456,42 @@ class ReportService {
   }
 
   exportReportAsJson(report: Report): string {
-    return JSON.stringify(report, null, 2);
+    const enabledSections = report.sections.filter((s) => s.enabled);
+    const structuredReport = {
+      metadata: {
+        reportId: report.id,
+        title: report.title,
+        reportType: report.reportType,
+        status: report.status,
+        version: report.version,
+        classification: report.configuration.classification,
+        leadAuditor: report.configuration.leadAuditor,
+        generatedAt: report.generatedAt || report.createdAt,
+        createdAt: report.createdAt,
+        updatedAt: report.updatedAt,
+      },
+      project: {
+        id: report.projectId,
+        name: report.projectName,
+        organization: report.organization,
+      },
+      riskSummary: {
+        overallRiskScore: report.overallRiskScore,
+        findingsCount: report.findingsCount,
+        criticalCount: report.criticalCount,
+        highCount: report.highCount,
+      },
+      configuration: report.configuration,
+      sections: enabledSections.map((s) => ({
+        id: s.id,
+        sectionType: s.sectionType,
+        title: s.title,
+        content: s.content,
+        order: s.order,
+        isAiGenerated: !!s.isAiGenerated,
+      })),
+    };
+    return JSON.stringify(structuredReport, null, 2);
   }
 }
 

@@ -85,10 +85,12 @@ class PDFReportGenerator:
             story.append(Spacer(1, 20))
 
             # Enabled Sections
+            import html
             for sec in report_data.get('sections', []):
                 if sec.get('enabled', True):
-                    story.append(Paragraph(sec.get('title', ''), heading_style))
-                    content_clean = sec.get('content', '').replace('\n', '<br/>')
+                    story.append(Paragraph(html.escape(sec.get('title', '')), heading_style))
+                    raw_content = sec.get('content', '')
+                    content_clean = html.escape(raw_content).replace('\n', '<br/>')
                     story.append(Paragraph(content_clean, body_style))
                     story.append(Spacer(1, 10))
 

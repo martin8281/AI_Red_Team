@@ -76,6 +76,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  const handleClear = () => {
+    setText('');
+    setAttachments([]);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+    onClearConversation?.();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -178,7 +187,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             {hasMessages && onClearConversation && (
               <button
                 type="button"
-                onClick={onClearConversation}
+                onClick={handleClear}
                 className="hover:text-[#EF4444] transition-colors flex items-center gap-1 font-mono text-[11px] px-2 py-1 rounded-lg hover:bg-[#101827]"
               >
                 <Trash2 className="w-3 h-3" />

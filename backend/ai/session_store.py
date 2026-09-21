@@ -23,6 +23,7 @@ class SessionEvidenceFile(BaseModel):
     size: int
     evidence_ids: List[str]
     content_snippet: str
+    raw_content: str = ""
     uploaded_at: str
     parsed_records_count: int = 0
 
@@ -99,6 +100,7 @@ class SessionContextStore:
                         size=att.get("size", len(content)),
                         evidence_ids=ev_ids,
                         content_snippet=content[:1000],
+                        raw_content=content,
                         uploaded_at=datetime.utcnow().isoformat(),
                         parsed_records_count=len(new_records)
                     )
@@ -183,23 +185,36 @@ class SessionContextStore:
             facts_str = "\n".join([f"- [{f.fact_id}] ({f.category}) {f.content}" for f in session.stated_facts])
             parts.append(f"### USER-STATED SESSION CONSTRAINTS & FACTS (MUST ENFORCE):\n{facts_str}")
 
-        # 2. Cumulative Uploaded Evidence Files in this Session
+        # 2. Cumulative Uploaded Evidence Files & Raw Data
         if session.uploaded_files:
             file_summaries = []
             for f in session.uploaded_files.values():
                 ev_str = f"Evidences: {', '.join(f.evidence_ids[:4])}{'...' if len(f.evidence_ids) > 4 else ''}"
+                file_text = f.raw_content if f.raw_content else f.content_snippet
                 file_summaries.append(
-                    f"- [{f.file_id}] {f.name} ({f.category}, {f.parsed_records_count} records) | {ev_str}\n"
-                    f"  Snippet: {f.content_snippet[:200]}..."
+                    f"--- FILE: {f.name} (Type: {f.category}, {f.parsed_records_count} parsed records) | {ev_str} ---\n"
+                    f"{file_text[:3500]}\n"
+                    f"--- END FILE: {f.name} ---"
                 )
-            parts.append(f"### CUMULATIVE EVIDENCE FILES UPLOADED IN THIS SESSION ({len(session.uploaded_files)} Total):\n" + "\n".join(file_summaries))
+            parts.append(f"### CUMULATIVE EVIDENCE FILES UPLOADED IN THIS SESSION ({len(session.uploaded_files)} Total):\n" + "\n\n".join(file_summaries))
 
-        # 3. Pre-computed Correlations
+        # 3. Parsed Structured Row-Level Log Records (from CSV / JSON / LOG parsing)
+        if session.all_log_records:
+            record_lines = []
+            for idx, r in enumerate(session.all_log_records[:40]):
+                ts_str = r.timestamp.isoformat() if hasattr(r.timestamp, "isoformat") else str(r.timestamp)
+                rec_info = f"- [Row {idx+1} | {r.evidence_id}] {ts_str} | IP: {r.src_ip or 'N/A'} -> {r.dest_ip or 'N/A'} | User: {r.user or 'N/A'} | Host/Asset: {r.asset or 'N/A'} | Action: {r.action}"
+                if r.raw_payload:
+                    rec_info += f" | Data: {r.raw_payload}"
+                record_lines.append(rec_info)
+            parts.append(f"### PARSED STRUCTURED LOG / CSV RECORDS ({len(session.all_log_records)} Total Rows):\n" + "\n".join(record_lines))
+
+        # 4. Pre-computed Correlations
         if session.correlation_clusters:
             corr_summaries = [f"- [{c.correlation_id}] {c.summary} (Evidences: {', '.join(c.evidence_refs)})" for c in session.correlation_clusters]
             parts.append(f"### CUMULATIVE PRE-COMPUTED CORRELATION CLUSTERS:\n" + "\n".join(corr_summaries))
 
-        # 4. Discussed / Proposed Findings in this session
+        # 5. Discussed / Proposed Findings in this session
         if session.discussed_findings:
             fnd_summaries = [f"- [{fid}] {f.get('category', 'Finding')} ({f.get('severity', 'HIGH')}) on {f.get('affected_asset', 'N/A')}: Status={f.get('status', 'proposed')}" for fid, f in session.discussed_findings.items()]
             parts.append(f"### FINDINGS GENERATED / DISCUSSED IN THIS SESSION ({len(session.discussed_findings)} Total):\n" + "\n".join(fnd_summaries))

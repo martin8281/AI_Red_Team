@@ -1,11 +1,12 @@
 import os
 import aiohttp
 from typing import List, Optional
+from ..core.config import settings
 
 class OllamaEmbeddingClient:
     def __init__(self, model_name: Optional[str] = None, base_url: Optional[str] = None):
-        self.model_name = model_name or os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
-        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+        self.model_name = model_name or settings.EMBEDDING_MODEL
+        self.base_url = base_url or settings.OLLAMA_BASE_URL
 
     async def get_embedding(self, text: str) -> List[float]:
         """

@@ -21,15 +21,17 @@ export class IntentClassifier {
   ];
 
   private static FULL_ASSESSMENT_PATTERNS = [
-    /(analyze|assess)\s+(this|the)\s+(entire\s+)?project/i,
+    /(analyze|assess)\s+(this|the)\s+(entire\s+)?(project|engagement)/i,
     /(give|provide|show)\s+me\s+(the\s+)?full\s+(risk\s+)?assessment/i,
     /comprehensive\s+(analysis|assessment|audit|review)/i,
     /generate\s+(an?\s+)?(engagement\s+)?(report|deliverable)/i,
     /threat\s+model(ing)?\s+(review|assessment|analysis)/i,
     /(overall|full|complete)\s+(risk\s+)?(posture|evaluation|summary)/i,
-    /executive\s+summary\s+of\s+(the\s+)?project/i,
+    /executive\s+summary\s+of\s+(the\s+)?(project|engagement)/i,
     /full\s+security\s+audit/i,
-    /audit\s+(this|the)\s+project/i,
+    /audit\s+(this|the)\s+(project|engagement)/i,
+    /(main|all)\s+security\s+findings/i,
+    /prepare\s+(the\s+)?(main\s+)?findings/i,
   ];
 
   private static SPECIFIC_QUERY_PATTERNS = [

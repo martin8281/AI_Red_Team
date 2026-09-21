@@ -10,12 +10,14 @@ SENSITIVE_PATTERNS = [
 ]
 
 PROMPT_INJECTION_PATTERNS = [
-    r"ignore\s+(?:all\s+)?(?:previous|prior)\s+instructions",
-    r"disregard\s+(?:all\s+)?(?:previous|prior)\s+(?:rules|instructions|prompts)",
-    r"you\s+are\s+now\s+(?:an?\s+)?(?:unfiltered|unrestricted|god\s+mode|dan)",
-    r"system\s+override",
-    r"reveal\s+(?:the\s+)?system\s+prompt",
+    r"ignore\s+(?:all\s+)?(?:the\s+)?(?:previous|prior|application(?:'s)?)\s+(?:instructions|rules|scope|prompts)",
+    r"disregard\s+(?:all\s+)?(?:the\s+)?(?:previous|prior)\s+(?:rules|instructions|prompts|scope|boundaries)",
+    r"you\s+are\s+now\s+(?:in\s+)?(?:an?\s+)?(?:unfiltered|unrestricted|god\s+mode|dan|administrator)",
+    r"system\s+(?:override|message:)",
+    r"reveal\s+(?:the\s+|all\s+)?(?:available\s+)?(?:system\s+prompt|evidence|instructions)",
+    r"treat\s+this\s+(?:document|file|text)\s+as\s+(?:administrator\s+|system\s+)?instructions",
     r"bypass\s+(?:all\s+)?safety\s+filters",
+    r"output\s+(?:your\s+)?system\s+prompt",
 ]
 
 class SafetySanitizer:
