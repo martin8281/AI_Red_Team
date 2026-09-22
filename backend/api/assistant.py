@@ -1,9 +1,11 @@
+import base64
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from backend.ai.ai_service import AIService
 from backend.pipeline.feedback_store import FeedbackLoopService, AnalystRejection
 from backend.pipeline.correlation_engine import DeterministicCorrelationEngine, LogRecord
+from backend.pipeline.file_parser import FileParserService
 
 router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 ai_service = AIService()
@@ -14,7 +16,41 @@ class ForensicAttachmentModel(BaseModel):
     name: str
     contentSnippet: Optional[str] = None
     content: Optional[str] = None
+    raw_content: Optional[str] = None
+    rawContent: Optional[str] = None
+    fullContent: Optional[str] = None
     type: Optional[str] = None
+    category: Optional[str] = None
+    size: Optional[int] = None
+    extension: Optional[str] = None
+
+
+class ParseFileRequest(BaseModel):
+    name: str
+    content_base64: Optional[str] = None
+    content_text: Optional[str] = None
+
+
+@router.post("/parse-file")
+async def parse_file_handler(payload: ParseFileRequest):
+    """
+    Universal File Extraction Endpoint:
+    Parses and extracts clean searchable text from PDF, DOCX, TXT, LOG, CSV, JSON, XML, Archives, etc.
+    """
+    try:
+        filename = payload.name
+        if payload.content_base64:
+            raw_b64 = payload.content_base64
+            if "," in raw_b64:
+                raw_b64 = raw_b64.split(",", 1)[1]
+            data = base64.b64decode(raw_b64)
+            parsed = FileParserService.parse_file(filename, data)
+        else:
+            text_bytes = (payload.content_text or "").encode("utf-8")
+            parsed = FileParserService.parse_file(filename, text_bytes)
+        return parsed
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse file: {str(e)}")
 
 
 class ChatRequest(BaseModel):

@@ -180,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
   return (
     <>
       {/* Desktop Persistent Sidebar */}
-      <aside className="hidden md:block fixed inset-y-0 left-0 w-64 h-screen z-30">
+      <aside className="hidden md:block fixed inset-y-0 left-0 w-64 h-screen z-30 print:hidden">
         {sidebarContent}
       </aside>
 

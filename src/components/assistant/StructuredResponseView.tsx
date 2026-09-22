@@ -47,11 +47,6 @@ export const StructuredResponseView: React.FC<StructuredResponseViewProps> = ({
 
   return (
     <div className="space-y-2.5 text-xs sm:text-sm leading-relaxed text-[#CBD5E1]">
-      
-      {/* LEVEL 1: Conversational Answer / Summary */}
-      <div className="text-[#F8FAFC] font-medium leading-relaxed">
-        {structured.summary || (finding ? `I identified a potential ${finding.category || 'Security Vulnerability'}.` : 'Technical assessment complete.')}
-      </div>
 
       {/* LEVEL 2: Compact Security Metadata Badge Line */}
       {(structured.risk || finding) && (

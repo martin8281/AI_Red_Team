@@ -25,6 +25,8 @@ import { ActionButtons } from './ActionButtons';
 import { CreateFindingFromAIModal, ProposedFindingData } from '../projects/CreateFindingFromAIModal';
 import { aiService } from '../../services/aiService';
 
+import { MarkdownRenderer } from '../ui/MarkdownRenderer';
+
 interface ChatMessageItemProps {
   message: ChatMessage;
   onActionClick?: (action: QuickActionType | string, customPrompt?: string) => void;
@@ -108,6 +110,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     { timestamp: '08:01:05Z', src: '198.51.100.44', event: 'SQL_INJECT_PAYLOAD', endpoint: '/api/v1/auth', detail: 'param: username, val: "admin\' OR \'1\'=\'1" -> HTTP 200 AUTH_SUCCESS' },
   ];
 
+  const isAssistantMode = 
+    message.mode === 'assistant' || 
+    message.metadata?.mode === 'assistant' || 
+    (message.mode === undefined && Boolean(message.structured?.findings?.length || message.structured?.risk));
+
   return (
     <>
       <div
@@ -146,7 +153,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   <span><span className="text-[#8B5CF6]">AI</span> <span className="text-[#e00000]">Red</span> <span className="text-white">Team Assistant</span></span>
                 </span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#8B5CF6]/10 text-[#A78BFA] border border-[#8B5CF6]/20">
-                  Qwen3 14B Grounded
+                  {isAssistantMode ? 'Qwen3 14B Grounded • Assistant Mode' : 'Qwen3 14B Grounded • Normal Chat'}
                 </span>
               </div>
             ) : null}
@@ -252,30 +259,45 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
             </div>
           ) : (
-            /* Standard Message Content View */
-            <>
-              {message.structured ? (
-                <StructuredResponseView 
-                  structured={message.structured}
-                  onAcceptFinding={(findingId) => {
-                    aiService.acceptProposedFinding(message.id, findingId);
-                  }}
-                  onRejectFinding={(findingId, reason, comment) => {
-                    aiService.rejectProposedFinding(message.id, findingId, reason, comment);
-                  }}
-                  onActionClick={onActionClick}
-                  onCreateFindingClick={() => setShowCreateFindingModal(true)}
-                />
-              ) : (
-                <p className={`text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans ${isUser ? 'text-white font-medium' : 'text-[#CBD5E1]'}`}>
+            <div className="space-y-3">
+              {/* PRIMARY AI RESPONSE CONTENT - ALWAYS RENDERED IN RICH MARKDOWN */}
+              {isUser ? (
+                <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans text-[#F8FAFC] font-medium">
                   {message.content}
                 </p>
+              ) : (
+                <MarkdownRenderer 
+                  content={
+                    (message.content && message.content.trim() !== "Analysis completed, but no response content was returned.")
+                      ? message.content.trim()
+                      : message.structured?.rawText?.trim() || 
+                        message.structured?.summary?.trim() || 
+                        (isAssistantMode ? 'Analysis completed.' : 'Hello! How can I help you today?')
+                  } 
+                />
               )}
-            </>
+
+              {/* SECONDARY UI: Grounded Finding Cards & Risk Metrics (in Assistant Mode if findings/risk exist) */}
+              {!isUser && isAssistantMode && message.structured && (message.structured.findings?.length || message.structured.risk) ? (
+                <div className="pt-2.5 border-t border-[#1E293B]/60">
+                  <StructuredResponseView 
+                    structured={message.structured}
+                    onAcceptFinding={(findingId) => {
+                      aiService.acceptProposedFinding(message.id, findingId);
+                    }}
+                    onRejectFinding={(findingId, reason, comment) => {
+                      aiService.rejectProposedFinding(message.id, findingId, reason, comment);
+                    }}
+                    onActionClick={onActionClick}
+                    onCreateFindingClick={() => setShowCreateFindingModal(true)}
+                  />
+                </div>
+              ) : null}
+            </div>
           )}
 
           {/* Expandable Evidence Inspection Panel (Opened via [Show Evidence]) */}
-          {!isUser && showEvidencePanel && (
+          {!isUser && isAssistantMode && showEvidencePanel && (
             <div className="p-3.5 rounded-xl bg-[#050A14] border border-[#3B82F6]/40 space-y-2.5 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold text-[#3B82F6]">
@@ -316,12 +338,12 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
           )}
 
           {/* Verified RAG Source Citations */}
-          {!isUser && citations.length > 0 && (
+          {!isUser && isAssistantMode && citations.length > 0 && (
             <SourceCitationsView sources={citations} />
           )}
 
           {/* Contextual Action Buttons for AI Responses */}
-          {!isUser && onActionClick && (
+          {!isUser && isAssistantMode && onActionClick && (
             <ActionButtons
               actions={message.structured?.actions || message.actions}
               structured={message.structured}

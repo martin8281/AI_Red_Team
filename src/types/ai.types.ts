@@ -19,6 +19,8 @@ export interface ForensicAttachment {
   extension: string;
   category: 'DOCUMENT' | 'DATA' | 'LOG' | 'ARCHIVE' | 'IMAGE' | 'BINARY';
   contentSnippet?: string; // Text content extracted for LLM analysis
+  content?: string; // Full extracted text content
+  rawContent?: string; // Raw extracted string
   dataUrl?: string; // Base64 data URL for preview/download
   uploadedAt: string;
 }
@@ -93,6 +95,8 @@ export interface AIAction {
 
 export interface StructuredAIResponse {
   intent?: ResponseIntentType;
+  mode?: ConversationMode;
+  response_type?: 'chat' | 'analysis';
   summary: string;
   risk?: {
     level: Severity;

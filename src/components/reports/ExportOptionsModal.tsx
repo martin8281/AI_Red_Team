@@ -77,7 +77,7 @@ export const ExportOptionsModal: React.FC<ExportOptionsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200 print:hidden">
       <div className="w-full max-w-xl rounded-2xl bg-bg-card border border-border-dark p-6 sm:p-8 shadow-2xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-border-dark">

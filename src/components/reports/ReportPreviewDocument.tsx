@@ -3,17 +3,10 @@ import {
   FileText, 
   Edit3, 
   Sparkles, 
-  ShieldCheck, 
   Printer, 
-  Download, 
-  Clock, 
-  FolderGit2, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ShieldAlert 
+  Download 
 } from 'lucide-react';
 import { Report, ReportSection } from '../../types/report.types';
-import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 
 interface ReportPreviewDocumentProps {
@@ -21,6 +14,173 @@ interface ReportPreviewDocumentProps {
   onEditSection: (section: ReportSection) => void;
   onExportClick: () => void;
 }
+
+const renderInlineText = (text: string): React.ReactNode[] => {
+  const parts: React.ReactNode[] = [];
+  const regex = /(\*\*.*?\*\*|`.*?`|\*.*?\*)/g;
+  const tokens = text.split(regex);
+
+  tokens.forEach((token, index) => {
+    if (token.startsWith('**') && token.endsWith('**') && token.length >= 4) {
+      parts.push(
+        <strong key={index} className="font-bold text-text-primary print:text-black">
+          {token.slice(2, -2)}
+        </strong>
+      );
+    } else if (token.startsWith('`') && token.endsWith('`') && token.length >= 2) {
+      parts.push(
+        <code key={index} className="font-mono text-xs px-1.5 py-0.5 rounded bg-bg-surface border border-border-dark text-brand-hover print:bg-gray-100 print:text-gray-900 print:border-gray-300">
+          {token.slice(1, -1)}
+        </code>
+      );
+    } else if (token.startsWith('*') && token.endsWith('*') && token.length >= 2) {
+      parts.push(
+        <em key={index} className="italic text-text-muted print:text-gray-700">
+          {token.slice(1, -1)}
+        </em>
+      );
+    } else {
+      parts.push(token);
+    }
+  });
+
+  return parts;
+};
+
+const FormattedMarkdownContent: React.FC<{ content: string }> = ({ content }) => {
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+
+  let inTable = false;
+  let tableRows: string[][] = [];
+
+  const flushTable = (key: string) => {
+    if (tableRows.length === 0) return;
+    const header = tableRows[0];
+    const bodyRows = tableRows.slice(1).filter(r => !r.every(cell => /^:?-+:?$/.test(cell.trim())));
+
+    elements.push(
+      <div key={key} className="my-4 overflow-x-auto rounded-xl border border-border-dark print:border-gray-300">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="bg-bg-elevated border-b border-border-dark print:bg-gray-100 print:border-gray-300">
+              {header.map((cell, idx) => (
+                <th key={idx} className="p-2.5 font-bold text-text-primary print:text-black">
+                  {renderInlineText(cell)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bodyRows.map((row, rIdx) => (
+              <tr key={rIdx} className="border-b border-border-dark/40 last:border-none print:border-gray-200">
+                {row.map((cell, cIdx) => (
+                  <td key={cIdx} className="p-2.5 text-text-secondary print:text-gray-900 font-sans">
+                    {renderInlineText(cell)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+    tableRows = [];
+    inTable = false;
+  };
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+
+    // Check table row starting with |
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      if (!inTable) {
+        inTable = true;
+        tableRows = [];
+      }
+      const cells = trimmed.split('|').slice(1, -1).map(c => c.trim());
+      tableRows.push(cells);
+      return;
+    } else if (inTable) {
+      flushTable(`table-${idx}`);
+    }
+
+    if (!trimmed) {
+      elements.push(<div key={`empty-${idx}`} className="h-2" />);
+      return;
+    }
+
+    // Code block marker ```
+    if (trimmed.startsWith('```')) {
+      return;
+    }
+
+    // Sub-headings (### or ##)
+    if (trimmed.startsWith('###')) {
+      const headingText = trimmed.replace(/^###\s*/, '');
+      elements.push(
+        <h4 key={`h4-${idx}`} className="text-sm font-bold text-text-primary print:text-black mt-4 mb-2 tracking-tight">
+          {renderInlineText(headingText)}
+        </h4>
+      );
+      return;
+    }
+    if (trimmed.startsWith('##')) {
+      const headingText = trimmed.replace(/^##\s*/, '');
+      elements.push(
+        <h3 key={`h3-${idx}`} className="text-base font-bold text-text-primary print:text-black mt-5 mb-2 tracking-tight">
+          {renderInlineText(headingText)}
+        </h3>
+      );
+      return;
+    }
+
+    // Bullet list items (- or *)
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      const bulletText = trimmed.slice(2).trim();
+      elements.push(
+        <div key={`bullet-${idx}`} className="flex items-start gap-2 text-xs sm:text-sm text-text-secondary print:text-gray-900 my-1 pl-2">
+          <span className="text-brand-primary print:text-black font-bold select-none">•</span>
+          <div className="flex-1">{renderInlineText(bulletText)}</div>
+        </div>
+      );
+      return;
+    }
+
+    // Numbered list items (1. , 2. )
+    const numMatch = trimmed.match(/^(\d+\.)\s+(.*)/);
+    if (numMatch) {
+      const prefix = numMatch[1];
+      const itemText = numMatch[2];
+      elements.push(
+        <div key={`num-${idx}`} className="flex items-start gap-2 text-xs sm:text-sm text-text-secondary print:text-gray-900 my-1 pl-2">
+          <span className="font-bold text-brand-hover print:text-black min-w-[18px]">{prefix}</span>
+          <div className="flex-1">{renderInlineText(itemText)}</div>
+        </div>
+      );
+      return;
+    }
+
+    // Section Dividers (---)
+    if (trimmed === '---') {
+      elements.push(<hr key={`hr-${idx}`} className="my-4 border-border-dark/60 print:border-gray-300" />);
+      return;
+    }
+
+    // Standard Paragraph
+    elements.push(
+      <p key={`p-${idx}`} className="text-xs sm:text-sm text-text-secondary print:text-gray-900 leading-relaxed my-1.5">
+        {renderInlineText(trimmed)}
+      </p>
+    );
+  });
+
+  if (inTable) {
+    flushTable('table-end');
+  }
+
+  return <div className="space-y-1">{elements}</div>;
+};
 
 export const ReportPreviewDocument: React.FC<ReportPreviewDocumentProps> = ({
   report,
@@ -75,7 +235,7 @@ export const ReportPreviewDocument: React.FC<ReportPreviewDocumentProps> = ({
       </div>
 
       {/* Main Document Body (Printable Area) */}
-      <div className="w-full max-w-4xl mx-auto rounded-2xl bg-[#090E17] border border-border-dark p-6 sm:p-12 shadow-2xl space-y-12 text-text-primary print:border-none print:shadow-none print:p-0 print:bg-white print:text-black">
+      <div className="report-document w-full max-w-4xl mx-auto rounded-2xl bg-[#090E17] border border-border-dark p-6 sm:p-12 shadow-2xl space-y-12 text-text-primary print:border-none print:shadow-none print:p-0 print:bg-white print:text-black">
         
         {/* Document Classification Header Banner */}
         <div className="text-center pb-6 border-b border-border-dark/80 print:border-black space-y-1">
@@ -83,7 +243,7 @@ export const ReportPreviewDocument: React.FC<ReportPreviewDocumentProps> = ({
             {report.configuration.classification}
           </span>
           <p className="text-[10px] text-text-muted print:text-gray-600 pt-2 font-mono">
-            AUTHORIZED SECURITY ASSESSMENT DELIVERABLE · HUMAN-IN-THE-LOOP VERIFIED
+            AUTHORIZED CYBER FORENSIC INVESTIGATION DELIVERABLE · HUMAN-IN-THE-LOOP VERIFIED
           </p>
         </div>
 
@@ -119,8 +279,8 @@ export const ReportPreviewDocument: React.FC<ReportPreviewDocumentProps> = ({
             </div>
 
             {/* Section Content Markdown Body */}
-            <div className="text-xs sm:text-sm text-text-secondary print:text-gray-900 leading-relaxed font-sans whitespace-pre-line bg-bg-surface/40 print:bg-transparent p-5 rounded-xl border border-border-dark/60 print:border-none print:p-0">
-              {sec.content}
+            <div className="bg-bg-surface/40 print:bg-transparent p-5 rounded-xl border border-border-dark/60 print:border-none print:p-0">
+              <FormattedMarkdownContent content={sec.content} />
             </div>
           </section>
         ))}
@@ -128,7 +288,7 @@ export const ReportPreviewDocument: React.FC<ReportPreviewDocumentProps> = ({
         {/* Document Footer Sign-off */}
         <div className="pt-8 border-t border-border-dark/80 print:border-black flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted print:text-gray-600 font-mono">
           <div>
-            Lead Auditor: <span className="font-bold text-text-primary print:text-black">{report.configuration.leadAuditor}</span>
+            Lead Examiner: <span className="font-bold text-text-primary print:text-black">{report.configuration.leadAuditor}</span>
           </div>
           <div>
             Delivered: {new Date(report.generatedAt || report.createdAt).toLocaleDateString()}
@@ -143,3 +303,4 @@ export const ReportPreviewDocument: React.FC<ReportPreviewDocumentProps> = ({
     </div>
   );
 };
+

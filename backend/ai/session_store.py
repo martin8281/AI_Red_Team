@@ -79,10 +79,17 @@ class SessionContextStore:
         if attachments:
             for att in attachments:
                 file_name = att.get("name", "evidence.log")
-                content = att.get("contentSnippet") or att.get("content", "")
+                content = (
+                    att.get("content") or 
+                    att.get("raw_content") or 
+                    att.get("rawContent") or 
+                    att.get("fullContent") or 
+                    att.get("contentSnippet") or 
+                    ""
+                )
                 att_id = att.get("id") or hashlib.sha256(f"{file_name}_{content}".encode()).hexdigest()[:8]
 
-                if att_id not in session.uploaded_files:
+                if att_id not in session.uploaded_files or len(content) > len(session.uploaded_files[att_id].raw_content):
                     ingest_res = UniversalIngestionRouter.route_and_ingest_content(
                         file_name=file_name,
                         content=content,
@@ -99,7 +106,7 @@ class SessionContextStore:
                         extension=att.get("extension", file_name.split(".")[-1] if "." in file_name else "txt"),
                         size=att.get("size", len(content)),
                         evidence_ids=ev_ids,
-                        content_snippet=content[:1000],
+                        content_snippet=content[:2000],
                         raw_content=content,
                         uploaded_at=datetime.utcnow().isoformat(),
                         parsed_records_count=len(new_records)
@@ -192,11 +199,16 @@ class SessionContextStore:
                 ev_str = f"Evidences: {', '.join(f.evidence_ids[:4])}{'...' if len(f.evidence_ids) > 4 else ''}"
                 file_text = f.raw_content if f.raw_content else f.content_snippet
                 file_summaries.append(
-                    f"--- FILE: {f.name} (Type: {f.category}, {f.parsed_records_count} parsed records) | {ev_str} ---\n"
-                    f"{file_text[:3500]}\n"
-                    f"--- END FILE: {f.name} ---"
+                    f"================================================================================\n"
+                    f"ATTACHED FILE: {f.name} (Type: {f.category}, Size: {f.size} bytes) | {ev_str}\n"
+                    f"================================================================================\n"
+                    f"{file_text[:30000]}\n"
+                    f"================================================================================"
                 )
-            parts.append(f"### CUMULATIVE EVIDENCE FILES UPLOADED IN THIS SESSION ({len(session.uploaded_files)} Total):\n" + "\n\n".join(file_summaries))
+            parts.append(
+                f"### ATTACHED EVIDENCE / REPORT FILES (YOU MUST CAREFULLY READ AND ANALYZE THE FULL CONTENT BELOW):\n" +
+                "\n\n".join(file_summaries)
+            )
 
         # 3. Parsed Structured Row-Level Log Records (from CSV / JSON / LOG parsing)
         if session.all_log_records:

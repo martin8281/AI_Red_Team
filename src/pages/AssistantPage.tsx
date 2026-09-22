@@ -76,6 +76,15 @@ export const AssistantPage: React.FC = () => {
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+  };
 
   // Initialize data
   useEffect(() => {
@@ -198,21 +207,30 @@ export const AssistantPage: React.FC = () => {
     setIsLoading(true);
     setLoadingStage('Analyzing evidence & project context...');
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     // Simulate multi-stage progress
     const stageTimer1 = setTimeout(() => setLoadingStage('Retrieving relevant security knowledge...'), 180);
     const stageTimer2 = setTimeout(() => setLoadingStage('Assessing risk & correlating indicators...'), 350);
 
     try {
-      const response = await aiService.sendMessage({
-        conversationId: activeConversationId,
-        projectId: selectedProjectId,
-        contextType,
-        contextId: selectedFindingId,
-        message: text,
-        mode: conversationMode,
-        attachments,
-        quickAction: quickAction as QuickActionType,
-      });
+      const response = await aiService.sendMessage(
+        {
+          conversationId: activeConversationId,
+          projectId: selectedProjectId,
+          contextType,
+          contextId: selectedFindingId,
+          message: text,
+          mode: conversationMode,
+          attachments,
+          quickAction: quickAction as QuickActionType,
+        },
+        { signal: controller.signal }
+      );
 
       if (response.mode && response.mode !== conversationMode) {
         setConversationMode(response.mode);
@@ -228,10 +246,17 @@ export const AssistantPage: React.FC = () => {
       const currentMsgs = await aiService.getMessages(response.conversationId);
       setMessages(currentMsgs);
     } catch (err: any) {
+      if (err?.name === 'AbortError' || err?.message?.includes('aborted')) {
+        // User cancelled request
+        return;
+      }
       setError(err?.message || 'Unable to connect to the local Ollama service.');
     } finally {
       clearTimeout(stageTimer1);
       clearTimeout(stageTimer2);
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
       setIsLoading(false);
     }
   };
@@ -768,6 +793,7 @@ export const AssistantPage: React.FC = () => {
               <ChatInput
                 onSendMessage={(text, atts) => handleSendMessage(text, atts)}
                 isLoading={isLoading}
+                onStop={handleStopGeneration}
                 hasMessages={messages.length > 0}
                 onClearConversation={handleClearConversation}
               />

@@ -11,7 +11,8 @@ import {
   FileCode, 
   Archive, 
   Image as ImageIcon,
-  Plus
+  Plus,
+  Square
 } from 'lucide-react';
 import { ForensicAttachment, QuickActionType } from '../../types/ai.types';
 import { processForensicFile, bytesToReadableSize } from '../../utils/fileHelper';
@@ -19,6 +20,7 @@ import { processForensicFile, bytesToReadableSize } from '../../utils/fileHelper
 interface ChatInputProps {
   onSendMessage: (message: string, attachments?: ForensicAttachment[]) => void;
   isLoading: boolean;
+  onStop?: () => void;
   onClearConversation?: () => void;
   hasMessages?: boolean;
   onQuickAction?: (action: QuickActionType) => void;
@@ -27,6 +29,7 @@ interface ChatInputProps {
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   isLoading,
+  onStop,
   onClearConversation,
   hasMessages = false,
   onQuickAction,
@@ -203,18 +206,31 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <span>Qwen3 14B • pgvector</span>
             </span>
 
-            <button
-              onClick={handleSend}
-              disabled={(!text.trim() && attachments.length === 0) || isLoading}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#7C3AED] hover:from-[#A78BFA] hover:to-[#8B5CF6] disabled:from-[#151F32] disabled:to-[#151F32] disabled:text-[#64748B] text-white text-xs font-bold transition-all shadow-md shadow-[#8B5CF6]/25 cursor-pointer disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Send className="w-3.5 h-3.5" />
-              )}
-              <span>Send</span>
-            </button>
+            {isLoading && onStop ? (
+              <button
+                type="button"
+                onClick={onStop}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#EF4444]/20 hover:bg-[#EF4444]/30 border border-[#EF4444]/40 text-[#EF4444] text-xs font-bold transition-all cursor-pointer shadow-md"
+                title="Stop response generation"
+              >
+                <Square className="w-3.5 h-3.5 fill-[#EF4444]" />
+                <span>Stop</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={(!text.trim() && attachments.length === 0) || isLoading}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#7C3AED] hover:from-[#A78BFA] hover:to-[#8B5CF6] disabled:from-[#151F32] disabled:to-[#151F32] disabled:text-[#64748B] text-white text-xs font-bold transition-all shadow-md shadow-[#8B5CF6]/25 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+                <span>Send</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-20 bg-bg-surface/95 border-b border-border-dark backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3.5">
+    <header className="sticky top-0 z-20 bg-bg-surface/95 border-b border-border-dark backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3.5 print:hidden">
       <div className="flex items-center justify-between">
         
         {/* Left: Mobile Toggle & Page Title */}

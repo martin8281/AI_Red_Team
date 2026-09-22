@@ -62,6 +62,12 @@ from tests.security.test_backup_and_recovery import TestBackupAndRecovery
 from tests.security.test_config_and_secrets import TestConfigAndSecrets
 from tests.security.test_privacy_and_data_governance import TestPrivacyAndDataGovernance
 from tests.security.test_api_security import TestAPISecurity
+from tests.unit.test_file_parser import (
+    test_file_parser_plain_text,
+    test_file_parser_docx_tables_and_text,
+    test_file_parser_zip_archive_inspection,
+    test_file_parser_truncation_limit,
+)
 
 def _run_audit_test(method_name):
     t = TestAuditAndGovernance()
@@ -158,6 +164,10 @@ def run_tests():
         ("API Security: RBAC Role-Based Authorization (403)", lambda: _run_api_test("test_04_cross_user_role_rbac_enforcement")),
         ("API Security: Cross-Project IDOR Defense (403)", lambda: _run_api_test("test_05_cross_project_idor_access_denied")),
         ("API Security: Mass Assignment Admin Escalation Blocked", lambda: _run_api_test("test_07_mass_assignment_protection_on_registration")),
+        ("File Parser: Plain Text & Log Extraction", test_file_parser_plain_text),
+        ("File Parser: Word DOCX Paragraphs & Tables Extraction", test_file_parser_docx_tables_and_text),
+        ("File Parser: ZIP Archive Manifest & File Extraction", test_file_parser_zip_archive_inspection),
+        ("File Parser: Context Truncation & Memory Safety", test_file_parser_truncation_limit),
     ]
 
     passed = 0

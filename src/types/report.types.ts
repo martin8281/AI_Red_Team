@@ -9,10 +9,20 @@ export type ReportType =
 export type ReportStatus = 'DRAFT' | 'GENERATING' | 'READY' | 'FAILED' | 'ARCHIVED';
 
 export type SectionType =
-  // 19 Court-Admissible Cyber Forensic Sections (Indian Evidence Act Sec 65B & IT Act 2000)
+  // 10 Court-Admissible Cyber Forensic Report Sections (Section 65B IEA / Section 79A IT Act)
+  | 'executive_summary'
+  | 'objectives'
+  | 'evidence_analyzed'
+  | 'relevant_findings'
+  | 'supporting_details'
+  | 'investigative_leads'
+  | 'additional_subsections'
+  | 'conclusion'
+  | 'references'
+  | 'appendices'
+  // Forensic & Assessment Legacy Section Aliases
   | 'cover_page'
   | 'case_information'
-  | 'executive_summary'
   | 'case_background'
   | 'scope_and_objectives'
   | 'evidence_inventory'
@@ -27,9 +37,6 @@ export type SectionType =
   | 'recommendations'
   | 'limitations'
   | 'legal_certificate_65b'
-  | 'references'
-  | 'appendices'
-  // Assessment sections
   | 'assessment_overview'
   | 'scope'
   | 'methodology'
@@ -37,7 +44,6 @@ export type SectionType =
   | 'findings'
   | 'evidence'
   | 'remediation_summary'
-  | 'conclusion'
   | 'appendix';
 
 export interface ReportSection {

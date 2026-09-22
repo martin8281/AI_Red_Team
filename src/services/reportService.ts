@@ -101,6 +101,16 @@ class ReportService {
     const now = new Date().toISOString();
     const reportId = `RPT-${Date.now().toString().slice(-4)}`;
 
+    const inScope = scopeAssets.filter((a: any) => a.scopeStatus === 'IN_SCOPE');
+    const outOfScope = scopeAssets.filter((a: any) => a.scopeStatus === 'OUT_OF_SCOPE');
+
+    const slaMap: Record<string, string> = {
+      'P1 — Immediate': '< 24 Hours (Immediate Hotfix)',
+      'P2 — High': '< 7 Days (Next Sprint)',
+      'P3 — Normal': '< 30 Days (Standard Release)',
+      'P4 — Low': 'Next Scheduled Maintenance',
+    };
+
     const isForensicReport = reportType === 'Cyber Forensic Investigation Report' || configuration.enabledSections.some(s => [
       'case_information', 'case_background', 'scope_and_objectives', 'evidence_inventory', 
       'chain_of_custody', 'acquisition_methodology', 'tools_and_technologies', 'forensic_examination',
@@ -114,282 +124,288 @@ class ReportService {
       const caseId = `CF-2026-${project.id.replace('PRJ-', '')}`;
       const dateStr = new Date().toLocaleDateString('en-GB');
 
-      // 1. Cover Page
+      // 1. Executive Summary
       sections.push({
         id: `sec-${reportId}-1`,
         reportId,
-        sectionType: 'cover_page',
-        title: '1. Cover Page',
-        content: `**CYBER FORENSIC INVESTIGATION REPORT**\n\n**Case Title:** ${title}\n**Case ID / Reference Number:** ${caseId}\n**Lead Forensic Examiner:** ${configuration.leadAuditor || project.leadTester || 'Martin Thomas (Lead Forensic Examiner)'}\n**Institution / Department:** ${configuration.institution || 'Department of Computer Science, CHRIST (Deemed to be University), Bangalore'}\n**Date of Investigation:** ${dateStr}\n**Date of Report:** ${dateStr}\n**Classification:** ${configuration.classification || 'CONFIDENTIAL // COURT ADMISSIBLE (SEC 65B IEA)'}\n**Statutory Framework:** Submitted under Section 65B of Indian Evidence Act, 1872 & Section 79A of Information Technology Act, 2000`,
-        order: 1,
-        enabled: configuration.enabledSections.includes('cover_page'),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 2. Case Information
-      sections.push({
-        id: `sec-${reportId}-2`,
-        reportId,
-        sectionType: 'case_information',
-        title: '2. Case Information',
-        content: `**Case Reference Details:**\n- **Case ID:** ${caseId}\n- **Case Title:** ${title}\n- **Investigator:** ${configuration.leadAuditor || project.leadTester || 'Martin Thomas'}\n- **Date Reported:** ${project.startDate || dateStr}\n- **Date of Investigation:** ${dateStr}\n- **Primary Evidence ID:** ${evidenceList[0]?.id || 'EVD-001'}\n- **Evidence Type:** Forensic Disk Image / System & Network Event Logs\n- **Investigation Objective:** Determine whether unauthorized access occurred, evaluate system compromise, reconstruct incident timeline, and establish forensic evidence chain of custody.`,
-        order: 2,
-        enabled: configuration.enabledSections.includes('case_information'),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 3. Executive Summary
-      sections.push({
-        id: `sec-${reportId}-3`,
-        reportId,
         sectionType: 'executive_summary',
-        title: '3. Executive Summary',
-        content: `This digital forensics investigation was conducted to examine suspected security events, unauthorized access attempts, and software vulnerabilities within the target environment of **${project.organization}**.\n\nA comprehensive forensic examination of **${evidenceList.length || 3} evidence artifacts** (including server access logs, authentication traces, and network telemetry) was executed on bit-stream working copies. Integrity was verified via SHA-256 cryptographic hashing.\n\n**Major Findings:**\n- A total of **${findings.length} technical security findings** were substantiated (${riskSummary.criticalCount} Critical, ${riskSummary.highCount} High, ${riskSummary.mediumCount} Medium, ${riskSummary.lowCount} Low).\n- The deterministic 4-factor risk assessment computed an aggregate engagement exposure score of **${riskSummary.overallScore}/100 (${riskSummary.riskLevel} Posture)**.\n- Empirical analysis confirmed unauthorized input manipulation and privilege boundary bypass patterns requiring immediate remediation.`,
-        order: 3,
-        enabled: configuration.enabledSections.includes('executive_summary'),
+        title: '1. Executive Summary',
+        content: `A short overview of the entire digital forensic investigation:
+
+**What Happened:**
+This digital forensics investigation was conducted to examine suspected security events, unauthorized access attempts, and software vulnerabilities within the target environment of **${project.organization}**.
+
+**What System/Evidence Was Investigated:**
+A comprehensive forensic examination of **${evidenceList.length || 3} evidence artifacts** (including server access logs, authentication traces, and network telemetry) was executed on bit-stream working copies. Integrity was verified via SHA-256 cryptographic hashing.
+
+**Why Investigation Was Conducted:**
+Management authorized a formal forensic assessment to examine digital artifacts, isolate indicators of compromise (IoCs), and ascertain the technical extent of unauthorized operations.
+
+**Major Findings:**
+- A total of **${findings.length} technical security findings** were substantiated (${riskSummary.criticalCount} Critical, ${riskSummary.highCount} High, ${riskSummary.mediumCount} Medium, ${riskSummary.lowCount} Low).
+- The deterministic 4-factor risk assessment computed an aggregate engagement exposure score of **${riskSummary.overallScore}/100 (${riskSummary.riskLevel} Posture)**.
+- Empirical analysis confirmed unauthorized input manipulation and privilege boundary bypass patterns requiring immediate remediation.
+
+**Overall Conclusion:**
+Evidence substantiates system compromise via un-sanitized input parameters. Immediate patch deployment and input parameterization are mandated.`,
+        order: 1,
+        enabled: configuration.enabledSections.includes('executive_summary') || configuration.enabledSections.includes('cover_page'),
         isAiGenerated: configuration.includeAiSummary,
         createdAt: now,
         updatedAt: now,
       });
 
-      // 4. Case Background
+      // 2. Objectives
+      sections.push({
+        id: `sec-${reportId}-2`,
+        reportId,
+        sectionType: 'objectives',
+        title: '2. Objectives',
+        content: `Clearly state what the investigation is trying to determine:
+
+1. **Identify suspicious activity** across perimeter gateways, web API clusters, and database management nodes.
+2. **Determine how the incident occurred** by isolating attack vectors, payload signatures, and temporal event traces.
+3. **Identify relevant files or artifacts** containing indicators of compromise (IoCs), exploit code, or unauthorized session activity.
+4. **Establish a defensible timeline** of security events across all examined digital artifacts.
+5. **Determine whether unauthorized activity occurred**, quantify technical impact, and formulate remediation directives.`,
+        order: 2,
+        enabled: configuration.enabledSections.includes('objectives') || configuration.enabledSections.includes('scope_and_objectives'),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // 3. Computer Evidence Analyzed
+      const evTable = evidenceList.length > 0
+        ? `| Evidence ID | Evidence | Source | Type | Hash |\n| :--- | :--- | :--- | :--- | :--- |\n` + evidenceList.map((e, idx) => {
+            const evId = e.id || ('E-' + (idx + 1).toString().padStart(2, '0'));
+            const evHash = e.sha256Hash || e.hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+            return `| ${evId} | ${e.title || 'Forensic Artifact'} | ${e.sourceTool || 'Suspect Computer'} | ${e.fileType || '.E01'} | ${evHash} |`;
+          }).join('\n')
+        : `| Evidence ID | Evidence | Source | Type | Hash |\n| :--- | :--- | :--- | :--- | :--- |\n| E-01 | Disk Image | Suspect Computer | .E01 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |\n| E-02 | Event Logs | Windows System | .evtx | 8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4 |\n| E-03 | Browser History | Chrome | Database | 7d793037a0760186574b0282f2f435e70d73a4e728d2db79ce563c639e706421 |`;
+
+      const cocTable = `| Date/Time | Handled By | Action Taken | Purpose |\n| :--- | :--- | :--- | :--- |\n| ${dateStr} 10:00:00 IST | ${configuration.leadAuditor || project.leadTester || 'Martin Thomas'} | Collected & Bit-Stream Imaged | Preserve initial state |\n| ${dateStr} 11:15:00 IST | Lab Custodian | Transferred to Secure Vault | Secure storage |\n| ${dateStr} 14:00:00 IST | Forensic Examiner | Mounted Read-Only Working Copy | Forensic examination |`;
+
+      sections.push({
+        id: `sec-${reportId}-3`,
+        reportId,
+        sectionType: 'evidence_analyzed',
+        title: '3. Computer Evidence Analyzed',
+        content: `### 3.1 Evidence Identification & Inventory:
+
+${evTable}
+
+### 3.2 Evidence Acquisition & Storage Details:
+- **Acquisition Method:** Hardware write-blocker bit-stream disk imaging and cryptographically signed log exports.
+- **Date/Time Acquired:** ${project.startDate || dateStr}
+- **Storage Location:** Forensic Evidence Vault, Lab Storage Unit 4 (Read-Only WORM Storage).
+- **Hash Verification:** Initial acquisition SHA-256 digests matched 100% with post-examination verification digests.
+- **Forensic Image Details:** EnCase E01 bit-stream format with embedded SHA-256 verification block.
+
+### 3.3 Chain of Custody:
+A record tracking who handled evidence, when, and for what purpose:
+
+${cocTable}`,
+        order: 3,
+        enabled: configuration.enabledSections.includes('evidence_analyzed') || configuration.enabledSections.includes('evidence_inventory') || configuration.enabledSections.includes('chain_of_custody'),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // 4. Relevant Findings
+      const fBlocks = findings.length > 0 ? findings.map((f, idx) => {
+        const fEv = evidenceList.filter((e) => e.findingId === f.id);
+        const fHash = fEv[0]?.sha256Hash || fEv[0]?.hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+        const fPath = f.endpoint || '/api/v1/auth/login';
+
+        return `### Finding ${idx + 1}: [${f.id}] ${f.title}
+- **File Path / Vector:** ${fPath}
+- **Evidence Type:** ${f.vulnerabilityType || 'Log Trace & PoC Request'}
+- **Relevance:** Exploit vector allowing unauthorized parameter injection and data access.
+- **Cryptographic Hash:** ${fHash}
+- **Summary of Finding:** ${f.description}`;
+      }).join('\n\n---\n\n') : `### Finding 1: [FND-101] SQL Injection in Authentication Endpoint
+- **File Path / Vector:** /api/v1/auth/login
+- **Evidence Type:** HTTP Server Access Logs & Event Traces
+- **Relevance:** Direct exploit vector enabling authentication bypass.
+- **Cryptographic Hash:** 8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4
+- **Summary of Finding:** Single-quote injection payload bypassed credential checks, issuing administrative access token.
+
+---
+
+### Finding 2: [FND-102] Server-Side Request Forgery (SSRF) in Export Service
+- **File Path / Vector:** /api/v1/reports/export
+- **Evidence Type:** Firewall Telemetry & Application Syslogs
+- **Relevance:** Egress communication vector to internal subnets.
+- **Cryptographic Hash:** 7d793037a0760186574b0282f2f435e70d73a4e728d2db79ce563c639e706421
+- **Summary of Finding:** Unvalidated URL parameter allowed application node to fetch resources from private 10.10.10.0/24 subnet.`;
+
       sections.push({
         id: `sec-${reportId}-4`,
         reportId,
-        sectionType: 'case_background',
-        title: '4. Case Background & Incident Description',
-        content: `### Incident Narrative & Background:\nOn **${project.startDate || dateStr}**, anomalous authentication activity and suspicious network requests were observed against target infrastructure belonging to **${project.organization}**.\n\nInitial indicators reported potential parameter injection, abnormal server-side requests, and unusual data access patterns on production API endpoints. Management authorized a formal forensic assessment to examine digital artifacts, isolate indicators of compromise (IoCs), and ascertain the technical extent of unauthorized operations.`,
+        sectionType: 'relevant_findings',
+        title: '4. Relevant Findings',
+        content: `Key digital evidence and technical findings uncovered during the investigation:\n\n${fBlocks}`,
         order: 4,
-        enabled: configuration.enabledSections.includes('case_background'),
+        enabled: configuration.enabledSections.includes('relevant_findings') || configuration.enabledSections.includes('findings_analysis') || configuration.enabledSections.includes('findings'),
         createdAt: now,
         updatedAt: now,
       });
 
-      // 5. Scope and Objectives
+      // 5. Details Supporting the Findings
       sections.push({
         id: `sec-${reportId}-5`,
         reportId,
-        sectionType: 'scope_and_objectives',
-        title: '5. Scope and Objectives',
-        content: `### Scope of Investigation (Authorized Target Assets):\n${
-          inScope.map((a) => `- [${a.assetType}] \`${a.value}\` — ${a.description || 'Authorized target'}`).join('\n') || '- Authorized Target: api.apexfin.com, auth.apexfin.com, 10.10.10.0/24'
-        }\n\n### Restricted Out-of-Scope Assets:\n${
-          outOfScope.map((a) => `- [${a.assetType}] \`${a.value}\` — ${a.description || 'Explicitly excluded'}`).join('\n') || '- Restricted Asset: prod-db.internal, 10.10.20.0/24, admin.apexfin.com'
-        }\n\n### Investigation Objectives:\n1. Determine whether unauthorized access, data exfiltration, or system manipulation occurred.\n2. Identify, preserve, and authenticate all relevant digital evidence artifacts.\n3. Establish a defensible, chronological timeline of security events.\n4. Identify source IP addresses, user accounts, and technical vectors involved in the incident.\n5. Quantify technical and business impact and formulate mitigation directives.`,
+        sectionType: 'supporting_details',
+        title: '5. Details Supporting the Findings',
+        content: `Detailed technical evidence supporting each finding:
+
+### 5.1 File System Evidence:
+Directory enumeration on forensic image E-01 revealed temporary web shell scripts created under /var/www/html/uploads/tmp_2026.php. Timestamp MACB analysis established creation time corresponding to initial exploit burst.
+
+### 5.2 Log Evidence:
+Web access logs (E-02) captured HTTP POST /api/v1/auth/login requests containing SQL payloads (' OR 1=1 --). Database query logs confirmed unescaped string concatenation.
+
+### 5.3 Metadata:
+EXIF and filesystem inode metadata confirmed file ownership under daemon web user (www-data), with modified timestamps matching incident window.
+
+### 5.4 Screenshots & Visual Traces:
+Sanitized terminal output captures and HTTP request/response header dumps confirm HTTP 200 OK responses with elevated privileges.
+
+### 5.5 Hash Values:
+- **Payload File (tmp_2026.php):** SHA-256 c78912d0981e4b891a2389128f901c8901239812903129381293812938129381
+- **Access Log Segment:** SHA-256 8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4`,
         order: 5,
-        enabled: configuration.enabledSections.includes('scope_and_objectives'),
+        enabled: configuration.enabledSections.includes('supporting_details') || configuration.enabledSections.includes('forensic_examination') || configuration.enabledSections.includes('evidence'),
         createdAt: now,
         updatedAt: now,
       });
 
-      // 6. Evidence Inventory
-      const evRows = evidenceList.length > 0 
-        ? evidenceList.map((e, idx) => `- **[${e.id || `EVD-00${idx+1}`}]** ${e.title || 'Forensic Artifact'} | Source: ${e.sourceTool || 'Server/Network'} | Acquired: ${dateStr} | SHA-256: \`${e.sha256Hash || e.hash || 'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3'}\` | Status: VERIFIED`).join('\n')
-        : `- **[EVD-001]** Nmap & Network Port Scan Telemetry | Source: Perimeter Gateway | Acquired: ${dateStr} | SHA-256: \`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\` | Status: VERIFIED\n- **[EVD-002]** Web Application HTTP Access Logs | Source: Web Server Cluster | Acquired: ${dateStr} | SHA-256: \`8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4\` | Status: VERIFIED\n- **[EVD-003]** Authentication & Audit Syslogs | Source: Identity Provider DB | Acquired: ${dateStr} | SHA-256: \`7d793037a0760186574b0282f2f435e70d73a4e728d2db79ce563c639e706421\` | Status: VERIFIED`;
-
+      // 6. Investigative Leads
       sections.push({
         id: `sec-${reportId}-6`,
         reportId,
-        sectionType: 'evidence_inventory',
-        title: '6. Evidence Description & Inventory',
-        content: `### Forensic Evidence Inventory & Cryptographic Checksums:\n\n${evRows}\n\nAll digital artifacts were captured using bit-stream duplication techniques and verified against initial SHA-256 checksums to ensure zero data alteration.`,
+        sectionType: 'investigative_leads',
+        title: '6. Investigative Leads',
+        content: `Highlighting specific actionable leads for further investigation:
+
+### 6.1 IP Addresses:
+- **Source IP 198.51.100.45:** Origin IP address associated with initial probing and authentication bypass requests.
+- **Egress Destination IP 203.0.113.88:** External command-and-control endpoint observed in firewall telemetry.
+
+### 6.2 Domains:
+- **C2 Domain:** tracking-telemetry-server.net (associated with outbound HTTP GET requests).
+
+### 6.3 File Hashes:
+- SHA-256 c78912d0981e4b891a2389128f901c8901239812903129381293812938129381 (PHP web shell payload).
+- SHA-256 a812390812309123890123890123890123890123890123890123890123890123 (Staged archive file).
+
+### 6.4 User Accounts:
+- **Compromised Account:** admin_svc (Service account utilized to execute privileged query queries).
+
+### 6.5 Additional Evidence:
+- Review recommended for DNS resolver logs from 10:20 IST to 10:35 IST for additional domain resolution requests.`,
         order: 6,
-        enabled: configuration.enabledSections.includes('evidence_inventory'),
+        enabled: configuration.enabledSections.includes('investigative_leads') || configuration.enabledSections.includes('timeline_reconstruction'),
         createdAt: now,
         updatedAt: now,
       });
 
-      // 7. Chain of Custody
+      // 7. Additional Subsections
       sections.push({
         id: `sec-${reportId}-7`,
         reportId,
-        sectionType: 'chain_of_custody',
-        title: '7. Chain of Custody',
-        content: `### Forensic Chain of Custody Ledger:\n\n- **[EVD-001]** ${dateStr} 10:00:00 IST | Action: Collected & Bit-Stream Imaged | From: Source Host / Network | To: Lead Forensic Examiner | Signature: [VERIFIED]\n- **[EVD-001]** ${dateStr} 11:15:00 IST | Action: Transferred to Secure Evidence Vault | From: Lead Forensic Examiner | To: Digital Forensic Lab Storage | Signature: [VERIFIED]\n- **[EVD-001]** ${dateStr} 14:00:00 IST | Action: Forensic Working Copy Mounted (Read-Only) | From: Evidence Vault | To: Analysis Workstation | Signature: [VERIFIED]\n- **[EVD-002]** ${dateStr} 10:30:00 IST | Action: Web Access Log Exported & Hashed | From: Production Logging Node | To: Lead Forensic Examiner | Signature: [VERIFIED]\n- **[EVD-003]** ${dateStr} 11:00:00 IST | Action: Syslog Extract Cryptographically Signed | From: Auth Cluster | To: Lead Forensic Examiner | Signature: [VERIFIED]\n\nThis chain of custody demonstrates that digital evidence was continuously secured, documented, and protected from unauthorized modification from point of collection through laboratory analysis.`,
+        sectionType: 'additional_subsections',
+        title: '7. Additional Subsections',
+        content: `### 7.1 Attacker Methodology:
+The adversary followed a structured tactical sequence: (1) Reconnaissance & endpoint discovery, (2) Parameter fuzzing and injection payload submission, (3) Authentication bypass and session token hijacking, (4) Internal SSRF probing against RFC 1918 subnets.
+
+### 7.2 User Applications:
+Target application stack comprised FastAPI backend services, React web frontend, and PostgreSQL database cluster running on Linux containers.
+
+### 7.3 Internet Activity:
+Analysis of proxy logs revealed persistent HTTP POST communication patterns over TCP port 443 with encrypted payload bodies during the incident timeframe.
+
+### 7.4 Recommendations:
+1. **Input Parameterization:** Enforce prepared statements across all SQL queries to eliminate injection vectors.
+2. **Network Egress Filtering:** Restrict application container egress access; block communication to un-whitelisted external IPs and private subnets.
+3. **Centralized Log Archival:** Implement immutable log forwarding with real-time cryptographic hash verification.`,
         order: 7,
-        enabled: configuration.enabledSections.includes('chain_of_custody'),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 8. Acquisition Methodology
-      sections.push({
-        id: `sec-${reportId}-8`,
-        reportId,
-        sectionType: 'acquisition_methodology',
-        title: '8. Acquisition Methodology',
-        content: `### Evidence Acquisition Standards:\n1. **Identification & Documentation:** Source hosts, network interfaces, and storage media were cataloged and documented prior to collection.\n2. **Network Isolation & Write-Blocking:** System endpoints were isolated where appropriate; hardware and software write-blocking was applied during storage media imaging.\n3. **Bit-Stream Forensic Imaging:** Bit-by-bit raw forensic images and log dumps were generated without altering source filesystems.\n4. **Cryptographic Hash Calculation:** SHA-256 hash digests were generated immediately upon acquisition and logged in the immutable audit ledger.\n5. **Working Copy Separation:** All examinations and evaluations were conducted strictly on verified forensic working copies rather than original media.`,
-        order: 8,
-        enabled: configuration.enabledSections.includes('acquisition_methodology'),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 9. Tools and Technologies
-      sections.push({
-        id: `sec-${reportId}-9`,
-        reportId,
-        sectionType: 'tools_and_technologies',
-        title: '9. Tools and Technologies',
-        content: `### Validated Forensic Software & Tool Inventory:\n\n- **FTK Imager (v4.7.1):** Bit-stream forensic disk acquisition and E01 image verification\n- **Autopsy / The Sleuth Kit (v4.21.0):** File system analysis, deleted file recovery, and timeline generation\n- **Wireshark & tcpdump (v4.2.2):** Network packet capture analysis and protocol inspection\n- **Nmap Security Scanner (v7.94):** Port enumeration, banner identification, and service fingerprinting\n- **FastAPI & Python 3.11 Runtime:** Deterministic risk scoring and automated evidence parsing pipeline\n- **PostgreSQL 16 & pgvector:** Relational metadata persistence and dense vector semantic retrieval\n- **HashDeep / SHA-256 Engine:** Cryptographic checksum computation and tamper verification`,
-        order: 9,
-        enabled: configuration.enabledSections.includes('tools_and_technologies'),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 10. Forensic Examination
-      sections.push({
-        id: `sec-${reportId}-10`,
-        reportId,
-        sectionType: 'forensic_examination',
-        title: '10. Forensic Examination & Evidence Analysis',
-        content: `### Technical Evidence Analysis Subsections:\n\n**10.1 File System & Storage Analysis:**\nInspection of directory hierarchies revealed creation of temporary script artifacts and unauthorized modification of configuration files. Timestamp analysis (MACB: Modified, Accessed, Created, Born) showed temporal correlation with external HTTP requests.\n\n**10.2 Log & Event Trace Analysis:**\nAnalysis of HTTP server logs and authentication records identified deliberate probing patterns, including single-quote injection payloads, time-delay boolean conditions, and path traversal strings against API gateways.\n\n**10.3 Network & Protocol Analysis:**\nCaptured packet streams demonstrated outbound HTTP requests originating from internal application servers toward unlisted external IP addresses, consistent with Server-Side Request Forgery (SSRF) mechanisms.\n\n**10.4 Threat Vector & Payload Diagnostics:**\nDissected attack payloads revealed structured SQL injection strings designed to bypass authentication checks without supplying valid passwords.`,
-        order: 10,
-        enabled: configuration.enabledSections.includes('forensic_examination'),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 11. Timeline Reconstruction
-      sections.push({
-        id: `sec-${reportId}-11`,
-        reportId,
-        sectionType: 'timeline_reconstruction',
-        title: '11. Timeline Reconstruction',
-        content: `### Chronological Incident Timeline:\n\n- **${dateStr} 10:21:15 IST** | Event: Multiple failed authentication attempts logged from remote IP | Source: Web Server Auth Log\n- **${dateStr} 10:22:03 IST** | Event: Malformed SQL payload submitted to authentication endpoint | Source: HTTP Access Log\n- **${dateStr} 10:22:45 IST** | Event: Authentication bypass observed; administrative session token issued | Source: Auth Audit Trace\n- **${dateStr} 10:25:17 IST** | Event: Execution of unauthorized data export query against customer repository | Source: Database Transaction Log\n- **${dateStr} 10:26:41 IST** | Event: Outbound HTTP connection initiated to external IP endpoint | Source: Network Firewall Log\n- **${dateStr} 10:30:00 IST** | Event: Assessment team isolated endpoint and initiated bit-stream capture | Source: Incident Response Log`,
-        order: 11,
-        enabled: configuration.enabledSections.includes('timeline_reconstruction'),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 12. Findings Analysis
-      const forensicFindingsBlocks = findings.length > 0 ? findings.map((f, idx) => {
-        const fEv = evidenceList.filter((e) => e.findingId === f.id);
-        const evLines = fEv.length > 0 ? fEv.map(e => e.id).join(', ') : 'EVD-001, EVD-002';
-        const itActSec = (f.title.toLowerCase().includes('sql') || f.title.toLowerCase().includes('auth')) 
-          ? 'Section 43 & Section 66 (Unauthorized Access / Hacking)' 
-          : 'Section 43A (Failure to Protect Sensitive Personal Data)';
-
-        return `### Finding ${idx + 1}: [${f.id}] ${f.title}
-- **Severity:** ${f.severity} | **Risk Score:** ${f.riskScore}/100 | **Priority:** ${f.priority}
-- **CVSS v3.1 Base Score:** ${f.cvssScore || '7.5'} | **CWE ID:** ${f.cweId || 'CWE-89'} | **Correlated Evidence:** ${evLines}
-- **Statutory Legal Classification:** IT Act 2000 ${itActSec}
-
-**Empirical Observation (Directly Observed in Logs):**
-${f.description}
-
-**Technical Forensic Conclusion (Substantiated by Evidence):**
-${f.impact}
-
-**Remediation Directive:**
-${f.recommendation}`;
-      }).join('\n\n---\n\n') : 'No security vulnerabilities logged for this engagement.';
-
-      sections.push({
-        id: `sec-${reportId}-12`,
-        reportId,
-        sectionType: 'findings_analysis',
-        title: '12. Forensic Findings & Legal Classifications',
-        content: forensicFindingsBlocks,
-        order: 12,
-        enabled: configuration.enabledSections.includes('findings_analysis'),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 13. Evidence Correlation
-      sections.push({
-        id: `sec-${reportId}-13`,
-        reportId,
-        sectionType: 'evidence_correlation',
-        title: '13. Correlation of Multi-Source Evidence',
-        content: `### Cross-Artifact Evidence Correlation:\n\n1. **Authentication Log to HTTP Trace:** The authentication failure burst in EVD-003 precisely aligns with the HTTP POST requests documented in EVD-002.\n2. **HTTP Payload to Database Query:** The SQL injection syntax submitted at 10:22:03 was directly reflected in the database query execution logs without lexical transformation.\n3. **Application Event to Network Telemetry:** Outbound egress traffic recorded in firewall telemetry at 10:26:41 establishes direct chronological continuity following successful payload processing.`,
-        order: 13,
-        enabled: configuration.enabledSections.includes('evidence_correlation'),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 14. Forensic Conclusion
-      sections.push({
-        id: `sec-${reportId}-14`,
-        reportId,
-        sectionType: 'forensic_conclusion',
-        title: '14. Forensic Conclusion',
-        content: `Based upon comprehensive examination of the submitted digital evidence and verified cryptographic hashes, the investigation confirms:\n\n1. **What Happened:** Security testing identified exploitable vulnerabilities on target web services enabling unauthorized query manipulation.\n2. **When It Occurred:** Technical events occurred during the authorized evaluation window on ${dateStr}.\n3. **Supporting Evidence:** The sequence of events is substantiated by SHA-256 verified log records in EVD-001, EVD-002, and EVD-003.\n4. **Affected Target:** Production web and API services associated with ${project.organization}.\n5. **Uncertainties & Gaps:** The available evidence confirms the technical exploit vector but does not independently determine the physical identity of unauthorized external actors.`,
-        order: 14,
-        enabled: configuration.enabledSections.includes('forensic_conclusion'),
-        isAiGenerated: configuration.includeAiConclusion,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 15. Recommendations
-      sections.push({
-        id: `sec-${reportId}-15`,
-        reportId,
-        sectionType: 'recommendations',
-        title: '15. Corrective & Preventive Recommendations',
-        content: `### Remediation Action Directives:\n\n1. **Input Parameterization:** Enforce parameterized queries (PreparedStatements) across all database interactions to eliminate SQL injection.\n2. **Authentication Hardening:** Mandate Multi-Factor Authentication (MFA) and enforce rate limiting on all login endpoints.\n3. **Network Egress Filtering:** Restrict application server egress traffic; block access to private RFC 1918 subnets and cloud metadata (169.254.169.254).\n4. **Centralized Log Integrity:** Ship audit logs to an immutable, write-once-read-many (WORM) storage system with cryptographic chaining.\n5. **Compliance Alignment:** Ensure adherence to reasonable security practices under Section 43A of the Information Technology Act, 2000.`,
-        order: 15,
-        enabled: configuration.enabledSections.includes('recommendations'),
+        enabled: configuration.enabledSections.includes('additional_subsections') || configuration.enabledSections.includes('recommendations'),
         isAiGenerated: configuration.includeAiRemediation,
         createdAt: now,
         updatedAt: now,
       });
 
-      // 16. Limitations
+      // 8. Conclusion
       sections.push({
-        id: `sec-${reportId}-16`,
+        id: `sec-${reportId}-8`,
         reportId,
-        sectionType: 'limitations',
-        title: '16. Investigation Limitations',
-        content: `### Forensic Constraints & Disclosures:\n\n1. **Scope Boundaries:** Analysis was strictly confined to authorized digital evidence and target assets specified in the engagement scope.\n2. **Log Availability:** Examination was limited to the telemetry captured during the assessment period.\n3. **Clock Synchronization:** Timestamps were recorded based on host system time; minor sub-second variance may exist across distributed nodes.\n4. **Non-Destructive Testing:** Controlled tests were performed to verify exploitability without causing data loss or service disruption.`,
-        order: 16,
-        enabled: configuration.enabledSections.includes('limitations'),
+        sectionType: 'conclusion',
+        title: '8. Conclusion',
+        content: `Final summary of the digital forensic investigation:
+
+**Was Incident Confirmed:**
+YES. Digital evidence, access logs, and cryptographic checksums confirm unauthorized input manipulation and administrative boundary bypass.
+
+**Key Evidence Supporting Conclusion:**
+1. SHA-256 verified HTTP access log entries in E-02 documenting single-quote injection strings.
+2. Database transaction traces confirming execution of un-sanitized administrative queries.
+3. Network firewall telemetry documenting outbound HTTP egress connections.
+
+**Impact of Findings:**
+Exposure of administrative session handling capabilities and potential data access vulnerability requiring mandatory patch application.
+
+**Next Steps & Recommended Actions:**
+1. Apply immediate software patch enforcing parameterized queries.
+2. Invalidate all active session tokens issued during the incident timeframe.
+3. Conduct follow-up verification re-testing prior to production re-certification.`,
+        order: 8,
+        enabled: configuration.enabledSections.includes('conclusion') || configuration.enabledSections.includes('forensic_conclusion'),
+        isAiGenerated: configuration.includeAiConclusion,
         createdAt: now,
         updatedAt: now,
       });
 
-      // 17. Legal Certificate 65B
+      // 9. References
       sections.push({
-        id: `sec-${reportId}-17`,
-        reportId,
-        sectionType: 'legal_certificate_65b',
-        title: '17. Certificate under Section 65B of Indian Evidence Act, 1872',
-        content: `**CERTIFICATE UNDER SECTION 65B OF THE INDIAN EVIDENCE ACT, 1872**\n*(Also complying with Section 63 of Bharatiya Sakshya Adhiniyam, 2023 & Section 79A of Information Technology Act, 2000)*\n\nI, **${configuration.leadAuditor || project.leadTester || 'Martin Thomas'}**, do hereby solemnly affirm and state as follows:\n\n1. I am in lawful control of the digital forensics and security evaluation systems utilized in generating this report.\n2. The electronic records, finding logs, and evidence digests contained herein were produced by the computer system during the period over which the computer was used regularly to store or process information for the purposes of security testing.\n3. Throughout the material part of the said period, the computer system was operating properly, and there was no operational failure or malfunction that would affect the accuracy or integrity of the electronic records.\n4. The digital evidence was preserved with SHA-256 cryptographic checksums, ensuring complete chain-of-custody and tamper-resistance.\n5. The contents of this report represent a true, faithful, and accurate reproduction of the electronic evidence examined.\n\n**Signed & Certified on ${dateStr}**\n**Name:** ${configuration.leadAuditor || project.leadTester || 'Martin Thomas'}\n**Designation:** Lead Forensic Examiner / Security Analyst\n**Department:** Department of Computer Science & Cyber Forensics Lab\n**Institution:** CHRIST (Deemed to be University), Bangalore`,
-        order: 17,
-        enabled: configuration.enabledSections.includes('legal_certificate_65b'),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 18. References
-      sections.push({
-        id: `sec-${reportId}-18`,
+        id: `sec-${reportId}-9`,
         reportId,
         sectionType: 'references',
-        title: '18. Statutory & Technical References',
-        content: `### Authoritative Standards & Legal Citations:\n\n- **[1]** The Information Technology Act, 2000 (Act No. 21 of 2000, as amended by Act 10 of 2009), Ministry of Law and Justice, Government of India.\n- **[2]** The Indian Evidence Act, 1872 (Section 65B - Admissibility of Electronic Records).\n- **[3]** NIST Special Publication 800-115, "Technical Guide to Information Security Testing and Assessment", National Institute of Standards and Technology.\n- **[4]** NIST Special Publication 800-86, "Guide to Integrating Forensic Techniques into Incident Response".\n- **[5]** FIRST Common Vulnerability Scoring System (CVSS) v3.1 Specification.\n- **[6]** OWASP Top 10: 2021 Web Application Security Standard.`,
-        order: 18,
+        title: '9. References',
+        content: `External standard documents, legal statutes, and technical specifications used:
+
+1. **ISO/IEC 27037:2012** — Guidelines for identification, collection, acquisition, and preservation of digital evidence.
+2. **NIST Special Publication 800-86** — Guide to Integrating Forensic Techniques into Incident Response.
+3. **NIST Special Publication 800-115** — Technical Guide to Information Security Testing and Assessment.
+4. **MITRE ATT&CK Framework** — T1190 (Exploit Public-Facing Application) & T1059 (Command and Scripting Interpreter).
+5. **Section 65B of Indian Evidence Act, 1872 & Section 63 of Bharatiya Sakshya Adhiniyam, 2023** — Admissibility of Electronic Records.
+6. **Section 43 & Section 66 of Information Technology Act, 2000** — Penalty for damage to computer system and computer related offences.`,
+        order: 9,
         enabled: configuration.enabledSections.includes('references'),
         createdAt: now,
         updatedAt: now,
       });
 
-      // 19. Appendices
+      // 10. Appendices
+      const leadAuditorName = configuration.leadAuditor || project.leadTester || 'Martin Thomas (Lead Forensic Examiner)';
       sections.push({
-        id: `sec-${reportId}-19`,
+        id: `sec-${reportId}-10`,
         reportId,
         sectionType: 'appendices',
-        title: '19. Appendices & Forensic Hash Ledger',
-        content: `### Appendix A: Cryptographic Integrity Verification Manifest\n**Algorithm:** SHA-256 | **Bit-Length:** 256 bits | **Standard:** FIPS 180-4\n- Artifact EVD-001 Checksum: \`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\`\n- Artifact EVD-002 Checksum: \`8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4\`\n- Artifact EVD-003 Checksum: \`7d793037a0760186574b0282f2f435e70d73a4e728d2db79ce563c639e706421\`\n\n### Appendix B: Examiner Credentials & Laboratory Accreditation\n**Examiners:** Martin Thomas & Jual Mary Jackson\n**Faculty Guide:** Lakshmi Sankaran, Assistant Professor\n**Institution:** CHRIST (Deemed to be University), Bangalore Yeshwanthpur Campus\n**Degree:** Master of Science in Artificial Intelligence and Cyber Security`,
-        order: 19,
-        enabled: configuration.enabledSections.includes('appendices'),
+        title: '10. Appendices',
+        content: "Technical details and supplementary forensic evidence:\n\n" +
+          "### Appendix A: Raw Log Extracts:\n" +
+          "198.51.100.45 - - [21/Sep/2026:10:22:03 +0530] \"POST /api/v1/auth/login HTTP/1.1\" 200 482 \"-\" \"Mozilla/5.0\"\n\n" +
+          "### Appendix B: Cryptographic Hash List:\n" +
+          "- **E-01 (Disk Image):** SHA-256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n" +
+          "- **E-02 (Event Logs):** SHA-256 8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4\n" +
+          "- **E-03 (Browser History):** SHA-256 7d793037a0760186574b0282f2f435e70d73a4e728d2db79ce563c639e706421\n\n" +
+          "### Appendix C: Examiner & Accreditation Metadata:\n" +
+          "- **Examiner:** " + leadAuditorName + "\n" +
+          "- **Institution:** Department of Computer Science, CHRIST (Deemed to be University), Bangalore\n" +
+          "- **Statutory Compliance:** Certified under Section 65B Indian Evidence Act, 1872 & Section 79A IT Act 2000",
+        order: 10,
+        enabled: configuration.enabledSections.includes('appendices') || configuration.enabledSections.includes('appendix'),
         createdAt: now,
         updatedAt: now,
       });

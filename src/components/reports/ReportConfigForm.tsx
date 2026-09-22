@@ -58,18 +58,16 @@ export const ReportConfigForm: React.FC<ReportConfigFormProps> = ({
   const [includeAiConclusion, setIncludeAiConclusion] = useState(true);
 
   const allSections: { id: SectionType; label: string; description: string }[] = [
-    { id: 'cover_page', label: '1. Cover Page', description: 'Document title, organization, lead auditor, and classification' },
-    { id: 'executive_summary', label: '2. Executive Summary', description: 'High-level risk narrative, finding counts, and executive posture' },
-    { id: 'assessment_overview', label: '3. Assessment Overview', description: 'Objectives, timeline, testing criteria, and governance' },
-    { id: 'scope', label: '4. Scope & Rules of Engagement', description: 'Authorized in-scope target list and excluded target assets' },
-    { id: 'methodology', label: '5. Testing Methodology', description: 'OWASP WSTG, NIST SP 800-115, and non-destructive PoC standards' },
-    { id: 'risk_summary', label: '6. Deterministic Risk Summary', description: '4-factor score breakdown (0–100) and severity distributions' },
-    { id: 'findings', label: '7. Detailed Findings Catalog', description: 'Full vulnerability profiles with description, impact, and fix' },
-    { id: 'evidence', label: '8. Proof-of-Concept Evidence', description: 'Sanitized request/response traces and validation logs' },
-    { id: 'recommendations', label: '9. Remediation & Hardening', description: 'Strategic defensive guidelines aligned with industry baselines' },
-    { id: 'remediation_summary', label: '10. Remediation Priority Queue', description: 'Action SLA matrix (P1 Immediate, P2 High, P3 Normal, P4 Low)' },
-    { id: 'conclusion', label: '11. Conclusion & Re-Testing', description: 'Formal engagement wrap-up and verification requirements' },
-    { id: 'appendix', label: '12. Appendix & References', description: 'CWE mappings, vulnerability taxonomy, and acronym glossary' },
+    { id: 'executive_summary', label: '1. Executive Summary', description: 'Overview of investigation, evidence analyzed, major findings, and conclusion' },
+    { id: 'objectives', label: '2. Objectives', description: 'Clear statement of investigation goals, timeline, and scope' },
+    { id: 'evidence_analyzed', label: '3. Computer Evidence Analyzed', description: 'Evidence inventory table, acquisition method, hashes, and chain of custody' },
+    { id: 'relevant_findings', label: '4. Relevant Findings', description: 'Key findings with file paths, evidence type, relevance, hash, and summary' },
+    { id: 'supporting_details', label: '5. Details Supporting Findings', description: 'File system, log traces, metadata, screenshots, and hash values' },
+    { id: 'investigative_leads', label: '6. Investigative Leads', description: 'Actionable leads: IP addresses, domains, file hashes, and user accounts' },
+    { id: 'additional_subsections', label: '7. Additional Subsections', description: 'Attacker methodology, user apps, internet activity, and recommendations' },
+    { id: 'conclusion', label: '8. Conclusion', description: 'Incident confirmation, supporting evidence, impact, and next steps' },
+    { id: 'references', label: '9. References', description: 'NIST, ISO/IEC 27037, MITRE ATT&CK, Sec 65B IEA / Sec 79A IT Act 2000' },
+    { id: 'appendices', label: '10. Appendices', description: 'Raw log extracts, hash manifest, system configs, and examiner metadata' },
   ];
 
   const [enabledSections, setEnabledSections] = useState<SectionType[]>(
@@ -254,7 +252,7 @@ export const ReportConfigForm: React.FC<ReportConfigFormProps> = ({
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-brand-primary" />
             <h3 className="text-sm sm:text-base font-bold text-text-primary">
-              Select Sections to Include (12 Total)
+              Select Sections to Include (10 Total)
             </h3>
           </div>
           <span className="text-xs font-mono text-text-muted">

@@ -122,34 +122,34 @@ class IntentClassifier:
     @classmethod
     def get_output_instruction(cls, intent: MessageIntent) -> str:
         """
-        Returns targeted prompt constraints based on classified intent.
+        Returns targeted prompt constraints based on classified intent for Assistant Mode (JSON mode).
         """
-        if intent == MessageIntent.CASUAL:
-            return (
-                "### RESPONSE FORMAT INSTRUCTION: CASUAL CONVERSATION\n"
-                "- Reply in friendly, professional, natural language plain text.\n"
-                "- DO NOT use structured cards, threat impact sections, remediation templates, or severity/confidence badges.\n"
-                "- Keep the response concise and conversational (1-3 sentences)."
-            )
-        elif intent == MessageIntent.CLARIFYING:
-            return (
-                "### RESPONSE FORMAT INSTRUCTION: STEP-BY-STEP GUIDANCE\n"
-                "- Provide clear, actionable guidance or a numbered 1-2-3 sequential list.\n"
-                "- Explain clearly what to inspect or attach next without generating a full assessment template.\n"
-                "- Do not include unrequested Risk Rating, Threat Impact, or Validation sections."
-            )
-        elif intent == MessageIntent.SPECIFIC_QUERY:
-            return (
-                "### RESPONSE FORMAT INSTRUCTION: TARGETED SPECIFIC RESPONSE\n"
-                "- Answer ONLY the specific question asked. Do not pad the response with unrequested sections.\n"
-                "- If asking for a list of findings, provide a concise markdown list or table.\n"
-                "- If asking about a single vulnerability, provide only its technical mechanism and remediation.\n"
-                "- Do NOT generate full assessment cards (Threat Impact, Validation, Executive Risk) unless specifically requested."
-            )
-        elif intent == MessageIntent.FULL_ASSESSMENT:
-            return (
-                "### RESPONSE FORMAT INSTRUCTION: FULL ENGAGEMENT ASSESSMENT\n"
-                "- Provide a comprehensive structured assessment with Risk Rating, Technical Reasoning, Threat Impact, Remediation, and Validation methodology.\n"
-                "- Include all calibrated finding cards and pre-computed correlations."
-            )
-        return ""
+        schema_format = (
+            "### RESPONSE FORMAT INSTRUCTION: STRICT VALID JSON ONLY\n"
+            "You MUST output a single valid JSON object. Analyze the attached evidence/context thoroughly and extract findings.\n\n"
+            "JSON Schema:\n"
+            "{\n"
+            '  "summary": "Detailed technical summary of the investigation, file evidence, and vulnerabilities found.",\n'
+            '  "findings": [\n'
+            "    {\n"
+            '      "id": "FND-01",\n'
+            '      "category": "Vulnerability / Finding Name",\n'
+            '      "severity": "HIGH",\n'
+            '      "confidence": "HIGH",\n'
+            '      "affected_asset": "Target Endpoint / File / Asset",\n'
+            '      "description": "Evidence-grounded technical details of observed vulnerability.",\n'
+            '      "impact": "Exploitability and impact explanation.",\n'
+            '      "recommendation": "Remediation guidance."\n'
+            "    }\n"
+            "  ],\n"
+            '  "risk": {\n'
+            '    "level": "HIGH",\n'
+            '    "score": 82,\n'
+            '    "text": "Calibrated risk assessment based on evidence."\n'
+            "  },\n"
+            '  "reasoning": "Detailed technical analysis of the evidence.",\n'
+            '  "impact": "Threat impact explanation.",\n'
+            '  "recommendation": "Remediation recommendations."\n'
+            "}"
+        )
+        return schema_format

@@ -240,7 +240,7 @@ class AIService {
     return list.length < initialLen;
   }
 
-  async sendMessage(params: AssistantChatRequest): Promise<AssistantChatResponse> {
+  async sendMessage(params: AssistantChatRequest, options?: { signal?: AbortSignal }): Promise<AssistantChatResponse> {
     let convId = params.conversationId;
     const now = new Date().toISOString();
 
@@ -323,27 +323,7 @@ class AIService {
     };
     allMessages.push(userMsg);
 
-    // 5. Run RAG Router & Retrieve Verified Knowledge Chunks
-    const route = knowledgeService.routeQuery(params.message);
-    let citations: SourceCitation[] = [];
-    let knowledgeContext = '';
-
-    if (route.intent === 'KNOWLEDGE_BASE' || route.intent === 'HYBRID') {
-      const chunks = await knowledgeService.searchChunks(params.message, { limit: route.suggestedK || 2 });
-      if (chunks.length > 0) {
-        citations = chunks.map((c) => ({
-          documentId: c.documentId,
-          title: c.title,
-          source: c.sourceName,
-          reference: c.section,
-          relevanceScore: c.similarityScore,
-          snippet: c.content.slice(0, 140) + '...',
-        }));
-        knowledgeContext = chunks.map((c) => `[SOURCE: ${c.sourceName} - ${c.title} (${c.section})]\n${c.content}`).join('\n\n');
-      }
-    }
-
-    // 6. Build Cumulative Multi-Turn Context (Session Files + Stated Facts + RAG)
+    // 5. Build Cumulative Multi-Turn Context (Session Files + Stated Facts)
     const sessionContextBlock = SessionContextStore.buildSessionContextBlock(
       finalConversationId,
       params.projectId
@@ -353,21 +333,21 @@ class AIService {
     if (sessionContextBlock) {
       combinedContext += `\n\n${sessionContextBlock}`;
     }
-    if (knowledgeContext) {
-      combinedContext += `\n\n### RETRIEVED AUTHORITATIVE KNOWLEDGE:\n${knowledgeContext}`;
-    }
 
-    // 6. Generate structured response with CUMULATIVE session files and active mode via Backend Ollama
-    const structuredResponse = await this.callBackendChatApi({
-      conversation_id: finalConversationId,
-      project_id: params.projectId,
-      context_type: params.contextType,
-      context_id: params.contextId,
-      message: params.message,
-      mode: activeMode,
-      quick_action: params.quickAction as string | undefined,
-      attachments: sessionMemory.uploadedFiles,
-    });
+    // 6. Generate response with CUMULATIVE session files and active mode via Backend Ollama
+    const structuredResponse = await this.callBackendChatApi(
+      {
+        conversation_id: finalConversationId,
+        project_id: params.projectId,
+        context_type: params.contextType,
+        context_id: params.contextId,
+        message: params.message,
+        mode: activeMode,
+        quick_action: params.quickAction as string | undefined,
+        attachments: sessionMemory.uploadedFiles,
+      },
+      options?.signal
+    );
 
     // If mode switched on this turn, prepend single-line confirmation if not already included
     if (didSwitchMode) {
@@ -380,9 +360,7 @@ class AIService {
       }
     }
 
-    if (citations.length > 0 && activeMode === 'assistant') {
-      structuredResponse.sources = citations;
-    }
+    const citations: SourceCitation[] = (structuredResponse.sources as any) || [];
 
     // Record findings & correlations into session memory
     if (structuredResponse.findings && structuredResponse.findings.length > 0) {
@@ -401,7 +379,6 @@ class AIService {
     }
 
     // 7. Determine whether to attach structured card or plain conversational text
-    // In Normal Chat mode: ALWAYS plain conversational text unless user specifically requested a quickAction or structured report
     const isPlainConversation =
       activeMode === 'chat'
         ? !params.quickAction
@@ -436,16 +413,19 @@ class AIService {
     };
   }
 
-  private async callBackendChatApi(payload: {
-    conversation_id?: string;
-    project_id: string;
-    context_type: string;
-    context_id?: string;
-    message: string;
-    mode?: string;
-    quick_action?: string;
-    attachments?: any[];
-  }): Promise<StructuredAIResponse> {
+  private async callBackendChatApi(
+    payload: {
+      conversation_id?: string;
+      project_id: string;
+      context_type: string;
+      context_id?: string;
+      message: string;
+      mode?: string;
+      quick_action?: string;
+      attachments?: any[];
+    },
+    signal?: AbortSignal
+  ): Promise<StructuredAIResponse> {
     try {
       const response = await fetch('/api/assistant/chat', {
         method: 'POST',
@@ -453,6 +433,7 @@ class AIService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
+        signal,
       });
 
       if (!response.ok) {
@@ -462,29 +443,47 @@ class AIService {
 
       const data = await response.json();
       const res = data.structured_response || {};
+      const activeMode = (res.mode || data.mode || payload.mode || 'chat') as ConversationMode;
+
+      let mappedSources: SourceCitation[] | undefined = undefined;
+      if (res.sources && Array.isArray(res.sources) && res.sources.length > 0) {
+        mappedSources = res.sources.map((s: any, idx: number) => ({
+          documentId: `doc-${idx}`,
+          title: s.title || s.source || 'Knowledge Base',
+          source: s.source || 'Vector Store',
+          reference: s.reference || 'Section',
+          relevanceScore: s.relevance || 0.9,
+          snippet: s.content ? (s.content.slice(0, 140) + '...') : '',
+        }));
+      }
+
       return {
-        summary: res.summary || res.raw_text || (res.findings ? 'Structured analysis complete.' : ''),
-        rawText: res.raw_text || res.summary || '',
-        findings: res.findings,
+        mode: activeMode,
+        response_type: res.response_type || (activeMode === 'assistant' ? 'analysis' : 'chat'),
+        summary: res.summary || res.raw_text || res.text || (res.findings ? 'Structured analysis complete.' : ''),
+        rawText: res.raw_text || res.text || res.summary || '',
+        findings: activeMode === 'chat' && !payload.quick_action ? undefined : res.findings,
         correlated_events: res.correlated_events,
         confidence: res.confidence || 'HIGH',
-        intent: res.intent || (payload.mode === 'chat' ? 'chat' : 'general_analysis'),
-        risk: res.risk,
+        intent: res.intent || (activeMode === 'chat' ? 'chat' : 'general_analysis'),
+        risk: activeMode === 'chat' && !payload.quick_action ? undefined : res.risk,
         reasoning: res.reasoning,
         impact: res.impact,
         recommendation: res.recommendation,
         suggestedValidation: res.suggestedValidation,
-        sources: res.sources,
-        actions: res.actions || (payload.mode === 'assistant' ? [
+        sources: mappedSources,
+        actions: res.actions || (activeMode === 'assistant' ? [
           { id: 'create-finding', label: 'Create Finding', type: 'create_finding', variant: 'primary' },
           { id: 'analyze-risk', label: 'Analyze Risk', type: 'analyze_risk', variant: 'secondary' },
           { id: 'suggest-tests', label: 'Suggest Tests', type: 'suggest_tests', variant: 'secondary' }
-        ] : []),
+        ] : undefined),
       };
     } catch (err: any) {
       const errMsg = err?.message || 'Connection refused';
       return {
         intent: 'error',
+        mode: (payload.mode as ConversationMode) || 'chat',
+        response_type: 'chat',
         summary: `AI engine unavailable: ${errMsg}`,
         rawText: `AI engine unavailable: Could not communicate with backend Ollama AI service (${errMsg}). Please ensure the backend and Ollama server ('ollama serve') are running.`,
         confidence: 'LOW',
