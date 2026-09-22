@@ -4,6 +4,9 @@ from .safety import SafetySanitizer
 class ContextBuilder:
     @staticmethod
     def build_context(project_data: Dict[str, Any], context_type: str, finding_data: Optional[Dict[str, Any]] = None) -> str:
+        if context_type == "general" or project_data.get("id") == "general":
+            return "SCOPE: General Security Consultation & Open AI Assistant Mode."
+
         if context_type == "finding" and finding_data:
             payload = f"""
 FINDING_ID: {finding_data.get('id')}

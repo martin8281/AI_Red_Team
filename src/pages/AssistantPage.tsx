@@ -147,6 +147,46 @@ export const AssistantPage: React.FC = () => {
     setMobileSidebarOpen(false);
   };
 
+  const handleProjectChange = async (newProjectId: string) => {
+    setSelectedProjectId(newProjectId);
+    setError(null);
+
+    const newContextType: ContextType = newProjectId === 'general' ? 'general' : 'project';
+    setContextType(newContextType);
+
+    if (newProjectId !== 'general') {
+      const projFinding = findings.find((f) => f.projectId === newProjectId);
+      setSelectedFindingId(projFinding?.id);
+    } else {
+      setSelectedFindingId(undefined);
+    }
+
+    // Isolate conversation history per project
+    const allConvs = await aiService.getConversations();
+    const matchingConv = allConvs.find(
+      (c) => c.projectId === newProjectId || (newProjectId === 'general' && c.contextType === 'general')
+    );
+
+    if (matchingConv) {
+      setActiveConversationId(matchingConv.id);
+      setConversationMode(matchingConv.mode || 'chat');
+      const msgs = await aiService.getMessages(matchingConv.id);
+      setMessages(msgs);
+    } else {
+      const activeProject = projects.find((p) => p.id === newProjectId);
+      const title = newProjectId === 'general' ? 'General Security Consultation' : `Chat on ${activeProject?.name || newProjectId}`;
+      const newConv = await aiService.createConversation({
+        projectId: newProjectId,
+        contextType: newContextType,
+        title,
+        mode: conversationMode,
+      });
+      setConversations((prev) => [newConv, ...prev]);
+      setActiveConversationId(newConv.id);
+      setMessages([]);
+    }
+  };
+
   const handleToggleMode = async (newMode: ConversationMode) => {
     setConversationMode(newMode);
     if (activeConversationId) {
@@ -431,6 +471,7 @@ export const AssistantPage: React.FC = () => {
           <ConversationSidebar
             conversations={conversations}
             activeConversationId={activeConversationId}
+            selectedProjectId={selectedProjectId}
             onSelectConversation={handleSelectConversation}
             onNewConversation={handleNewConversation}
             onDeleteConversation={handleDeleteConversation}
@@ -532,7 +573,7 @@ export const AssistantPage: React.FC = () => {
         <ContextSelectorBar
           projects={projects}
           selectedProjectId={selectedProjectId}
-          onProjectChange={(id: string) => setSelectedProjectId(id)}
+          onProjectChange={(id: string) => handleProjectChange(id)}
           contextType={contextType}
           onContextTypeChange={(type: ContextType) => setContextType(type)}
           selectedFindingId={selectedFindingId}

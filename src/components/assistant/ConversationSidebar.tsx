@@ -14,6 +14,7 @@ import { Button } from '../ui/Button';
 interface ConversationSidebarProps {
   conversations: Conversation[];
   activeConversationId?: string;
+  selectedProjectId?: string;
   onSelectConversation: (id: string) => void;
   onNewConversation: () => void;
   onDeleteConversation: (id: string) => void;
@@ -22,15 +23,21 @@ interface ConversationSidebarProps {
 export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   conversations,
   activeConversationId,
+  selectedProjectId,
   onSelectConversation,
   onNewConversation,
   onDeleteConversation,
 }) => {
   const [search, setSearch] = useState('');
+  const [filterMode, setFilterMode] = useState<'current' | 'all'>('current');
 
-  const filtered = conversations.filter((c) =>
-    c.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = conversations.filter((c) => {
+    const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase());
+    if (filterMode === 'current' && selectedProjectId) {
+      return matchesSearch && (c.projectId === selectedProjectId || (selectedProjectId === 'general' && c.contextType === 'general'));
+    }
+    return matchesSearch;
+  });
 
   return (
     <div className="flex flex-col h-full bg-bg-card border-r border-border-dark w-full lg:w-72 shrink-0 p-4 space-y-3">
@@ -55,6 +62,32 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
           placeholder="Filter sessions..."
           className="w-full pl-8 pr-3 py-1.5 bg-bg-elevated border border-border-dark rounded-lg text-xs text-text-primary placeholder:text-text-disabled focus:outline-none focus:ring-1 focus:ring-brand-primary"
         />
+      </div>
+
+      {/* Filter Mode Toggle */}
+      <div className="flex items-center rounded-lg bg-[#101827] border border-[#1E293B] p-0.5 text-[11px] font-mono">
+        <button
+          type="button"
+          onClick={() => setFilterMode('current')}
+          className={`flex-1 py-1 rounded-md transition-all text-center ${
+            filterMode === 'current'
+              ? 'bg-[#8B5CF6] text-white font-bold shadow-sm'
+              : 'text-[#94A3B8] hover:text-[#CBD5E1]'
+          }`}
+        >
+          Scope Filter
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterMode('all')}
+          className={`flex-1 py-1 rounded-md transition-all text-center ${
+            filterMode === 'all'
+              ? 'bg-[#8B5CF6] text-white font-bold shadow-sm'
+              : 'text-[#94A3B8] hover:text-[#CBD5E1]'
+          }`}
+        >
+          All Sessions
+        </button>
       </div>
 
       {/* Conversation List */}
