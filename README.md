@@ -1,163 +1,414 @@
-# AI Red Team Assistant
+<div align="center">
 
-> **Enterprise-Grade Context-Aware Co-Pilot for Authorized Security Testers**  
-> Powered by Local **Qwen3 14B (Ollama)**, **PostgreSQL `pgvector` RAG**, Deterministic 4-Factor Risk Engine, and a strict **Human-in-the-Loop** Security Model.
+<img src="public/logo.png" alt="AI Red Team Assistant logo" width="110" />
+
+# AI <span style="color:#e11">RED</span> TEAM ASSISTANT
+
+### Your intelligent co-pilot for authorized security testing
+
+An on-premises, **human-in-the-loop** AI platform that helps security testers analyze vulnerabilities, prioritize risk, understand findings, and generate professional reports.
+
+<br/>
+
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-3-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-Qwen3_14B-000000?style=for-the-badge&logo=ollama&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Human in the loop](https://img.shields.io/badge/Human--in--the--Loop-Strict-8B5CF6?style=for-the-badge)
+
+<br/>
+
+[Features](#-key-features) · [Screenshots](#-screenshots) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Testing](#-testing) · [Docs](#-documentation)
+
+<br/>
+
+<img src="docs/screenshots/landing.png" alt="AI Red Team Assistant landing page" width="100%" />
+
+</div>
 
 ---
 
-## 🌟 Overview & Core Philosophy
+## 📖 About the Project
 
-The **AI Red Team Assistant** is an on-premises intelligence platform designed to augment professional security testers and red team operators throughout the entire lifecycle of an engagement: from scoping and vulnerability discovery to deterministic risk calibration, RAG-grounded remediation reasoning, deliverable generation, and executive analytics.
+**AI Red Team Assistant** supports professional security testers across the full engagement lifecycle: **scoping → finding discovery → risk calibration → remediation tracking → report delivery**.
+
+It is a *co-pilot*, not an autopilot. The AI explains, correlates, and recommends. The human tester stays in control of every decision.
 
 ### 🛡️ Core Principles
-1. **Strict Human-in-the-Loop Governance**: The AI serves strictly as an advisory co-pilot. It **never** autonomously executes attacks, exploits targets, or mutates project records without explicit human tester authorization.
-2. **Deterministic Risk Engineering**: Numerical risk scores ($0–100$) are calculated via an explainable mathematical engine rather than relying on subjective LLM guesses.
-3. **Verified Knowledge Grounding (Zero Hallucinations)**: The AI is grounded in indexed standards (OWASP Top 10, MITRE CWE, NIST SP 800-115, CVSS v3.1) stored in `pgvector`. Every standard citation is verified against real document chunks.
-4. **100% On-Premises Privacy**: No customer data, credentials, or findings are transmitted to commercial cloud AI APIs. All inferencing executes locally via Ollama.
+
+| Principle | What it means |
+| :--- | :--- |
+| 🧑‍💻 **Human-in-the-Loop** | The AI never runs attacks, exploits targets, or changes project records without explicit tester approval. |
+| 🧮 **Deterministic Risk Scoring** | Risk scores (0–100) come from an explainable, configurable math engine, not from LLM guesses. |
+| 📚 **Grounded Answers (RAG)** | Responses are grounded in indexed standards (OWASP, CWE, NIST, CVSS) stored in `pgvector`, with citations. |
+| 🔒 **100% On-Premises** | Inference runs locally through Ollama. No customer data goes to commercial cloud AI APIs. |
 
 ---
 
-## 🛠️ Technology Stack
+## ✨ Key Features
 
-| Layer | Technology | Key Capabilities |
-| :--- | :--- | :--- |
-| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Lucide React, Recharts | Strict typing, responsive dark theme (`#050A14`), 5x5 threat risk heatmap, 30-day velocity charts |
-| **Backend API** | Python 3.11, FastAPI, Uvicorn, Pydantic, SQLAlchemy | RESTful endpoints, rate limiting, enterprise security headers, RBAC |
-| **AI Inference** | Ollama, Qwen3 14B, LangGraph, Context Builder | Prompt injection defense, secret redaction, structured JSON schema parsing |
-| **Vector Store** | PostgreSQL 16, `pgvector`, `nomic-embed-text` | 768-dimensional dense vector embeddings, cosine similarity search |
-| **Deployment** | Docker, Docker Compose, Nginx Alpine | Multi-stage non-root containers, health checks, named volume persistence |
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🤖 AI Security Co-Pilot
+- Chat with the AI in **General** or **Entire Project** context, or scoped to a single **Finding**, **Scope Boundary**, or **Risk Profile**
+- Attach forensic evidence: logs, PCAP, code, PDFs, archives
+- Correlates `auth.log`, `nmap` scans, and traffic traces
+- Suggests **controlled, non-destructive** validation tests
+- Structured JSON responses with honest-uncertainty fallbacks
+- Session history with per-project conversations
+
+</td>
+<td width="50%" valign="top">
+
+### 🧮 Deterministic Risk Engine
+- Weighted multi-factor model: **Impact (35%)**, **Likelihood (30%)**, **Asset Criticality (20%)**, **Exploitability (15%)**
+- Scores map to **Critical / High / Moderate / Low** and **P1–P4** priorities
+- All weights and thresholds live in one config file
+- Highest-impact threat and ranked threat vectors per engagement
+- **"Explain Risk Posture with AI"** for plain-language reasoning
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 📁 Projects & Scope Management
+- Engagement containers with client, type, dates, and scope
+- Live progress, finding count, critical count, and risk score per project
+- Status workflow: **Draft → Active → On Hold → Completed → Archived**
+- Scope boundary enforcement and asset inventory
+- Project file manager with preview
+
+</td>
+<td width="50%" valign="top">
+
+### 🔎 Findings & Evidence
+- Central repository of verified vulnerabilities with proof-of-concept evidence
+- Filter by project, severity, status, and priority
+- Remediation lifecycle: **Open → In Review → Remediation → Resolved**
+- CWE classification, affected asset, and endpoint tracking
+- Create findings directly from AI analysis
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 📊 Analytics & Heatmap
+- **5×5 threat risk heatmap** (Impact × Likelihood), click a cell to inspect threats
+- 7 / 30 / 90-day and all-time views
+- Remediation rate, SLA, and finding velocity trends
+- AI-written posture summary with suggested prompt queries
+- **Export to CSV**
+
+</td>
+<td width="50%" valign="top">
+
+### 📄 Report Generation
+- Audit-ready deliverables built from real scope, verified findings, and deterministic metrics
+- Penetration Testing Report and other deliverable types
+- Section editor, live preview, and versioning
+- Export to **PDF** and **DOCX**
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🧠 Knowledge Base (RAG)
+- Indexed sources: **OWASP Top 10**, **MITRE CWE**, **NIST SP 800-115**, **FIRST CVSS v3.1**, and internal red team playbooks
+- `nomic-embed-text` embeddings stored in **PostgreSQL pgvector**
+- Semantic vector search and an ingestion wizard for your own documents
+- Citation verification against real document chunks
+
+</td>
+<td width="50%" valign="top">
+
+### 🔐 Security & Governance
+- **JWT authentication** with encrypted session handling
+- **RBAC**: Admin, Security Tester, Reviewer, Viewer
+- Object-level project authorization
+- Rate limiting and enterprise security headers
+- Input sanitization, prompt-injection defense, secret redaction
+- SSRF blocklist, path traversal protection, audit logging
+
+</td>
+</tr>
+</table>
 
 ---
 
-## 🚀 Quickstart & Installation
+## 📸 Screenshots
 
-### Option 1: Docker Compose (Recommended)
+<details open>
+<summary><b>🔑 Sign in</b></summary>
+<br/>
 
-```powershell
+Role-based access with quick demo accounts for **Tester**, **Lead**, and **Viewer**.
+
+<img src="docs/screenshots/login.png" alt="Login page" width="100%" />
+</details>
+
+<details open>
+<summary><b>📈 Dashboard</b></summary>
+<br/>
+
+Engagement stats, an AI priority review queue, and an overall risk score with a risk vector breakdown.
+
+<img src="docs/screenshots/dashboard.png" alt="Dashboard" width="100%" />
+</details>
+
+<details open>
+<summary><b>🤖 AI Security Co-Pilot</b></summary>
+<br/>
+
+Project-aware chat grounded in your evidence files, powered by a local Qwen3 14B model.
+
+<img src="docs/screenshots/ai-copilot.png" alt="AI Co-Pilot" width="100%" />
+</details>
+
+<details open>
+<summary><b>📁 Projects & Scope</b></summary>
+<br/>
+
+<img src="docs/screenshots/projects.png" alt="Projects and engagements" width="100%" />
+</details>
+
+<details open>
+<summary><b>🔎 Findings & Evidence</b></summary>
+<br/>
+
+<img src="docs/screenshots/findings.png" alt="Findings repository" width="100%" />
+</details>
+
+<details open>
+<summary><b>⚠️ Risk Analysis</b></summary>
+<br/>
+
+<img src="docs/screenshots/risk-analysis.png" alt="Risk analysis" width="100%" />
+</details>
+
+<details open>
+<summary><b>📊 Analytics & Heatmap</b></summary>
+<br/>
+
+<img src="docs/screenshots/analytics.png" alt="Analytics and heatmap" width="100%" />
+</details>
+
+<details open>
+<summary><b>📄 Reports</b></summary>
+<br/>
+
+<img src="docs/screenshots/reports.png" alt="Report generation" width="100%" />
+</details>
+
+<details open>
+<summary><b>🧠 Knowledge Base (RAG)</b></summary>
+<br/>
+
+<img src="docs/screenshots/knowledge-base.png" alt="Knowledge base" width="100%" />
+</details>
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+    U([👤 Security Tester]) --> FE[React 18 + TypeScript<br/>Vite SPA :3000]
+    FE -->|REST + JWT| API[FastAPI Gateway :8000]
+
+    subgraph Backend
+        API --> AUTH[RBAC · Rate Limit<br/>Sanitization · Audit]
+        API --> RISK[Deterministic<br/>Risk Engine]
+        API --> RPT[Report Engine<br/>PDF · DOCX]
+        API --> AN[Analytics<br/>Trends · Heatmap]
+        API --> AI[AI Service<br/>Context Builder · Safety]
+    end
+
+    AI -->|retrieve| VS[(PostgreSQL 16<br/>pgvector)]
+    AI -->|prompt| LLM[Ollama<br/>Qwen3 14B]
+    VS -.->|nomic-embed-text| LLM
+    AUTH --> DB[(PostgreSQL)]
+```
+
+**How an AI answer is produced:**
+
+1. The tester asks a question inside a project context.
+2. The **Context Builder** gathers project scope, findings, and attached evidence.
+3. Relevant standards are retrieved from **pgvector** (RAG).
+4. The prompt is sanitized (injection defense and secret redaction) and sent to the **local Qwen3 14B**.
+5. The response is parsed into a structured schema and returned with **verified citations**.
+6. The tester reviews it. Nothing is acted on automatically.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+| :--- | :--- |
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, React Router, Recharts, Lucide |
+| **Backend** | Python 3.11, FastAPI, Uvicorn, Pydantic, SQLAlchemy |
+| **AI** | Ollama, Qwen3 14B, structured prompt management, safety guardrails |
+| **Vector Store** | PostgreSQL 16, `pgvector`, `nomic-embed-text` embeddings |
+| **Reports** | ReportLab (PDF), python-docx (DOCX) |
+| **DevOps** | Docker, Docker Compose, Nginx, GitHub Actions CI |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/) and Docker Compose
+- [Ollama](https://ollama.com/) installed on the host
+- Node.js 20+ and Python 3.11+ (only for local development)
+
+### Option 1: Docker Compose (recommended)
+
+```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/ai-red-team-assistant.git
-cd ai-red-team-assistant
+git clone https://github.com/<your-username>/<your-repo>.git
+cd <your-repo>
 
 # 2. Configure environment variables
 cp .env.example .env
+#    then edit .env and change SECRET_KEY, JWT_SECRET and database passwords
 
-# 3. Pull required Ollama models on your host
+# 3. Pull the local AI models
 ollama pull qwen3:14b
 ollama pull nomic-embed-text
 
-# 4. Build and start all containers (PostgreSQL pgvector, FastAPI, React/Nginx)
-docker-compose up -d --build
+# 4. Build and start everything (PostgreSQL + pgvector, FastAPI, React/Nginx)
+docker compose up -d --build
 ```
-Access the application at: `http://localhost:3000` (API backend at `http://localhost:8000/docs`).
 
----
+| Service | URL |
+| :--- | :--- |
+| 🖥️ Web app | http://localhost:3000 |
+| ⚙️ API docs (Swagger) | http://localhost:8000/docs |
 
-### Option 2: Local Development Setup
+### Option 2: Local development
 
-#### 1. Frontend Setup (Node.js LTS)
-```powershell
+**Frontend**
+
+```bash
 npm install
-npm run dev
+npm run dev          # http://127.0.0.1:3000
 ```
-Development server runs at `http://127.0.0.1:3000`.
 
-#### 2. Backend Setup (Python 3.11)
-```powershell
+**Backend**
+
+```bash
 python -m venv venv
-.\venv\Scripts\activate
+source venv/bin/activate          # Windows: .\venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-#### 3. Default Tester Credentials
-- **Email**: `tester@redteam.local`
-- **Password**: `RedTeam@2026`
-- **Role**: `SECURITY_TESTER`
+### Demo account
+
+| Email | Password | Role |
+| :--- | :--- | :--- |
+| `tester@redteam.local` | `RedTeam@2026` | `SECURITY_TESTER` |
+
+> ⚠️ Demo credentials are for local evaluation only. Never use them in a real deployment.
 
 ---
 
-## 🧪 Automated Testing & Verification
+## 🧪 Testing
 
-The project includes an exhaustive automated test suite with **100% pass rates**:
+```bash
+# Backend unit tests
+python -m unittest discover backend/tests -v
 
-```powershell
-# 1. Run Complete Automated Test Suite (Unit, Security, AI Guardrails)
+# Security and AI guardrail suite
 python run_all_tests.py
 
-# 2. Run End-to-End 12-Phase System Demonstration Script
+# Golden-project integration workflow
+python test_golden_project.py
+
+# End-to-end workflow demonstration
 python test_e2e_workflow.py
 
-# 3. Verify TypeScript Strict Compilation & Production Bundle
+# Frontend type check and production build
 npm run build
 ```
 
-### Test Suite Summary
-- **Unit Tests**: Deterministic risk calculation, factor weight distribution, workflow state machine transitions.
-- **Security Tests**: SQL injection parameterization, XSS escaping, SSRF cloud metadata blocklist (169.254.169.254 / RFC1918), Path Traversal defense (`../../etc/passwd`).
-- **AI Tests**: Prompt injection keyword defense, structured JSON response parsing, and honest uncertainty fallbacks.
+**Coverage areas**
+
+- ✅ Risk engine calculation and factor weights
+- ✅ Intent classification and session memory
+- ✅ Finding correlation and report generation
+- ✅ SQL injection parameterization and XSS escaping
+- ✅ SSRF blocklist (cloud metadata and private ranges)
+- ✅ Path traversal defense
+- ✅ Prompt-injection defense and structured response parsing
+
+A **GitHub Actions** pipeline (`.github/workflows/ci.yml`) runs the backend tests, security suite, and frontend build on every push and pull request.
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-AI-Red-Team-Assistant/
-├── src/                              # React 18 TypeScript Frontend
-│   ├── assets/                       # Brand icons & Shield SVG logos
-│   ├── auth/                         # JWT Authentication context & session storage
-│   ├── components/                   # Modular UI components
-│   │   ├── analytics/                # 5x5 Risk Heatmap, Trend Charts, Benchmarks
-│   │   ├── assistant/                # AI Chat workspace & citation views
-│   │   ├── dashboard/                # Main dashboard widgets & navigation sidebar
-│   │   ├── findings/                 # Finding cards, severity badges, filter bars
-│   │   ├── knowledge/                # Source catalog, search bar, ingestion wizard
-│   │   ├── projects/                 # Project cards, scope inventory tables
-│   │   ├── reports/                  # Report previewer, section editor, export modal
-│   │   ├── risk/                     # 4-factor risk sliders & history timelines
-│   │   └── workspace/                # Engagement workspace, health monitor, checklist
-│   ├── data/                         # Authoritative mock datasets & knowledge sources
-│   ├── pages/                        # Route page views (/dashboard, /projects, /findings, /assistant, /risk-analysis, /reports, /knowledge, /analytics)
-│   ├── routes/                       # ProtectedRoute & PublicOnlyRoute guards
-│   ├── services/                     # Business logic service layer
-│   ├── types/                        # TypeScript domain model definitions
-│   └── utils/                        # Security sanitizers & RBAC guards
-├── backend/                          # FastAPI Backend Architecture
-│   ├── ai/                           # Context builder, prompt manager, response parser
-│   ├── analytics/                    # Risk, finding, and remediation aggregators
-│   ├── api/                          # REST API route handlers
-│   ├── core/                         # Config, security middleware, rate limiter, RBAC
-│   ├── knowledge/                    # pgvector models, ingestion, embedding client
-│   ├── reports/                      # Report models & export formatters
-│   ├── risk/                         # Deterministic 4-factor risk engine
-│   └── workspace/                    # Workflow state machine & health evaluator
-├── docs/                             # Academic & Enterprise Documentation
-│   ├── ACADEMIC_REPORT.md            # Chapters 1–8 thesis documentation
-│   ├── API_DOCUMENTATION.md          # Exhaustive REST API specification
-│   ├── ARCHITECTURE.md               # Visual Mermaid architecture & DFD diagrams
-│   ├── BACKUP_STRATEGY.md            # Enterprise backup & disaster recovery SOP
-│   ├── DEMO_SCRIPT.md                # 15-Minute guided presentation script
-│   └── TEST_REPORT.md                # QA testing matrix (100% pass)
-├── docker-compose.yml                # Multi-container Docker orchestration
-├── Dockerfile.backend                # Python FastAPI production container
-├── Dockerfile.frontend               # Nginx + Vite production container
-├── run_all_tests.py                  # Universal automated test runner
-└── test_e2e_workflow.py              # End-to-end 12-phase demonstration script
+.
+├── src/                    # React + TypeScript frontend
+│   ├── components/         #   analytics · assistant · auth · dashboard · findings
+│   │                       #   knowledge · projects · reports · risk · workspace
+│   ├── pages/              #   Dashboard, Projects, Findings, Risk, Analytics, Reports, Knowledge…
+│   ├── auth/               #   JWT auth context and services
+│   └── ai/                 #   Client-side context builder and response parsing
+├── backend/                # FastAPI backend
+│   ├── ai/                 #   AI service, prompts, safety, intent classifier, session store
+│   ├── analytics/          #   Finding, risk, remediation, and trend analytics
+│   ├── api/                #   REST route handlers
+│   ├── core/               #   RBAC, security, sanitization, scope enforcer, audit logger
+│   ├── knowledge/          #   Embeddings, ingestion, pgvector store, RAG router
+│   ├── pipeline/           #   File parsing and evidence correlation engine
+│   ├── reports/            #   Report engine with PDF and DOCX generators
+│   ├── risk/               #   Deterministic risk engine and config
+│   ├── workspace/          #   Workflow engine, health evaluator, progress calculator
+│   └── tests/              #   Unit tests
+├── docs/                   # Architecture, API, test report, demo script and more
+├── docker-compose.yml
+├── Dockerfile.backend
+├── Dockerfile.frontend
+└── run_all_tests.py
 ```
 
 ---
 
-## 📖 Documentation & Academic Deliverables
+## 📚 Documentation
 
-Complete documentation is available in the [`docs/`](./docs/) directory:
-- [**System Architecture & Diagrams**](./docs/ARCHITECTURE.md) (DFD Level 0/1, ER Model, Use Cases, AI/RAG Pipeline)
-- [**API Specifications**](./docs/API_DOCUMENTATION.md) (Full endpoint request/response contracts)
-- [**Academic Thesis Report**](./docs/ACADEMIC_REPORT.md) (Chapters 1–8 thesis report)
-- [**Quality Assurance Test Report**](./docs/TEST_REPORT.md) (Complete QA testing matrix)
-- [**15-Minute Demo Script**](./docs/DEMO_SCRIPT.md) (Step-by-step presentation walkthrough)
-- [**Backup & Disaster Recovery SOP**](./docs/BACKUP_STRATEGY.md) (PostgreSQL & pgvector backup procedures)
+| Document | Description |
+| :--- | :--- |
+| [Architecture](docs/ARCHITECTURE.md) | System design, data-flow diagrams, ER model, RAG pipeline |
+| [API Documentation](docs/API_DOCUMENTATION.md) | Full REST endpoint reference |
+| [Test Report](docs/TEST_REPORT.md) | QA matrix and results |
+| [Backup Strategy](docs/BACKUP_STRATEGY.md) | PostgreSQL and pgvector backup and recovery |
+| [Demo Script](docs/DEMO_SCRIPT.md) | Guided walkthrough |
+| [Academic Report](docs/ACADEMIC_REPORT.md) | Project report |
 
 ---
 
-## ⚖️ License & Ethical Testing Notice
+## ⚖️ Ethical Use Notice
 
-This software is developed strictly for **authorized security testing, defense-in-depth evaluations, and academic research**. Unauthorized penetration testing against systems without prior written consent is illegal. The system strictly adheres to non-destructive testing guidelines and requires explicit human confirmation for all actions.
+This software is built **only for authorized security testing, defensive evaluation, and academic research**. Testing systems without prior written permission is illegal. The platform follows non-destructive testing practices and requires explicit human confirmation for every action.
+
+---
+
+<div align="center">
+
+**Built with 💜 for defenders who think like attackers.**
+
+⭐ If you find this project useful, consider giving it a star.
+
+</div>
