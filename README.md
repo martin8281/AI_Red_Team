@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/banner.svg" width="100%" alt="AI Red Team Assistant" />
+<img src="banner.svg" width="100%" alt="AI Red Team Assistant" />
 
 <br/>
 
@@ -11,7 +11,7 @@
 
 </div>
 
-<img src="assets/divider.svg" width="100%" alt="" />
+<img src="divider.svg" width="100%" alt="" />
 
 ## 👋 Overview
 
@@ -21,27 +21,27 @@ The tester always stays in control. The assistant explains and recommends, it ne
 
 <div align="center">
 
-<img src="assets/principles.svg" width="100%" alt="Human-in-the-loop, no autonomous attacks, context-aware assistance" />
+<img src="principles.svg" width="100%" alt="Human-in-the-loop, no autonomous attacks, context-aware assistance" />
 
 </div>
 
-<img src="assets/divider.svg" width="100%" alt="" />
+<img src="divider.svg" width="100%" alt="" />
 
 ## 🖥️ Product Preview
 
 <div align="center">
 
-<img src="assets/preview.png" width="100%" alt="AI Red Team Assistant preview" />
+<img src="preview.png" width="100%" alt="AI Red Team Assistant preview" />
 
 </div>
 
-<img src="assets/divider.svg" width="100%" alt="" />
+<img src="divider.svg" width="100%" alt="" />
 
 ## ✨ Features
 
 <div align="center">
 
-<img src="assets/features.svg" width="100%" alt="Features" />
+<img src="features.svg" width="100%" alt="Features" />
 
 </div>
 
@@ -49,11 +49,11 @@ The tester always stays in control. The assistant explains and recommends, it ne
 
 <div align="center">
 
-<img src="assets/severity.svg" width="100%" alt="Risk score and finding severity tally" />
+<img src="severity.svg" width="100%" alt="Risk score and finding severity tally" />
 
 </div>
 
-<img src="assets/divider.svg" width="100%" alt="" />
+<img src="divider.svg" width="100%" alt="" />
 
 ## 🔄 How It Works
 
@@ -68,7 +68,7 @@ flowchart LR
 
 <!-- TODO: adjust the steps if your real workflow differs -->
 
-<img src="assets/divider.svg" width="100%" alt="" />
+<img src="divider.svg" width="100%" alt="" />
 
 ## 🛠️ Tech Stack
 
@@ -95,19 +95,18 @@ python app.py
 
 ```text
 ai-red-team-assistant/
-├── assets/
-│   ├── banner.svg
-│   ├── features.svg
-│   ├── severity.svg
-│   ├── principles.svg
-│   ├── divider.svg
-│   └── preview.png         ← product screenshot
+├── README.md
+├── banner.svg
+├── features.svg
+├── severity.svg
+├── principles.svg
+├── divider.svg
+├── preview.png
 ├── app.py
-├── requirements.txt
-└── README.md
+└── requirements.txt
 ```
 
-<img src="assets/divider.svg" width="100%" alt="" />
+<img src="divider.svg" width="100%" alt="" />
 
 ## ⚠️ Disclaimer
 
